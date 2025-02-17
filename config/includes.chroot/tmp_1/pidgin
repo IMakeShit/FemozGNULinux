@@ -1,0 +1,3 @@
+#!/bin/sh
+# TODO: Что нибудь ещё
+LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --bind / / --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --unshare-pid --unshare-ipc --unshare-uts /usr/bin/pidgin "${@}"

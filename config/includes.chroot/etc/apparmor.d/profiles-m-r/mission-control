@@ -1,0 +1,30 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,telepathy/}mission-control-5
+profile mission-control @{exec_path} flags=(attach_disconnected)  {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  /usr/share/telepathy/{,**} r,
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+
+  owner @{user_share_dirs}/telepathy/ rw,
+  owner @{user_share_dirs}/telepathy/mission-control/ rw,
+  owner @{user_share_dirs}/telepathy/mission-control/*.cfg* rw,
+
+  owner @{user_config_dirs}/libaccounts-glib/accounts.db{,-shm,-wal} rwk,
+
+  @{run}/systemd/inhibit/[0-9]*.ref rw,
+
+  include if exists <local/mission-control>
+}

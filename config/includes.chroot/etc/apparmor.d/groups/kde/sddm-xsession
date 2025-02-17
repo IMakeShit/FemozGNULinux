@@ -1,0 +1,128 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/sddm/Xsession
+profile sddm-xsession @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/bash>
+  include <abstractions/zsh>
+
+  @{exec_path} r,
+
+  /{usr/,}{local,}bin/ r,
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/{m,g,}awk  rix,
+  @{bin}/cat        rix,
+  @{bin}/chmod      rix,
+  @{bin}/csh        rix,
+  @{bin}/date       rix,
+  @{bin}/fish       rix,
+  @{bin}/id         rix,
+  @{bin}/gpgconf   rCx -> gpg,
+  @{bin}/stat       rix,
+  @{bin}/tail       rix,
+  @{bin}/mv         rix,
+  @{bin}/locale-check rPx,
+  @{bin}/mktemp     rix,
+  @{bin}/rm         rix,
+  @{bin}/tcsh       rix,
+  @{bin}/tempfile   rix,
+  @{bin}/touch      rix,
+  @{bin}/which{,.*} rix,
+  @{bin}/zsh        rix,
+
+  @{bin}/dbus-update-activation-environment  rCx -> dbus,
+  @{bin}/flatpak                             rPx,
+  @{bin}/numlockx                            rPx,
+  @{bin}/xhost                               rPx,
+  @{bin}/xrdb                                rPx,
+  /etc/X11/Xsession                               rPx,
+  @{bin}/ssh-agent                           rPx,
+  @{bin}/udevadm                             rPx,
+
+  @{bin}/run-parts         rCx -> run-parts,
+
+  # Allowed GUI sessions to start
+  #@{bin}/openbox-session  rPx,
+  #@{bin}/openbox          rPx,
+
+  /etc/default/{,*} r,
+  /etc/X11/{,**} r,
+
+  owner @{HOME}/.xsession-errors w,
+
+  owner @{user_share_dirs}/sddm/xorg-session.log w,
+
+  owner /tmp/xsess-env-* rw,
+  owner /tmp/file* rw,
+
+  owner @{PROC}/@{pid}/loginuid r,
+
+  profile run-parts {
+    include <abstractions/base>
+
+    @{bin}/run-parts mr,
+
+    /etc/X11/Xsession.d/ r,
+    /etc/X11/Xresources/ r,
+
+    owner @{HOME}/.xsession-errors w,
+
+    include if exists <local/sddm-xsession_run-parts>
+  }
+
+  profile dbus {
+    include <abstractions/base>
+
+    @{bin}/dbus-update-activation-environment mr,
+
+    owner @{HOME}/.xsession-errors w,
+
+    include if exists <local/sddm-xsession_dbus>
+  }
+
+    profile gpg {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+    include <abstractions/openssl>
+    include <abstractions/ssl_certs>
+
+    capability dac_read_search,
+
+    network inet stream,
+    network inet6 stream,
+    network inet dgram,
+    network inet6 dgram,
+
+    @{bin}/gpg{,2} mr,
+    @{bin}/gpgconf mr,
+    @{bin}/gpgsm   mr,
+
+    @{bin}/dirmngr           rix,
+    @{bin}/gpg-agent         rPx,
+    @{bin}/gpg-connect-agent rix,
+
+    @{HOME}/@{XDG_GPG_DIR}/*.conf r,
+
+    @{PROC}/@{pid}/fd/ r,
+    @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+          /dev/tty@{int} rw,
+    owner /dev/pts/@{int} rw,
+
+    deny @{user_share_dirs}/sddm/* rw,
+
+    include if exists <local/sddm-xsession_gpg>
+  }
+
+  include if exists <local/sddm-xsession>
+}

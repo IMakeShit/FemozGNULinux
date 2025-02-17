@@ -1,0 +1,30 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dmesg
+profile dmesg @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability syslog,
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{sh_path}        rix,
+  @{bin}/less       rPx -> child-pager,
+
+  /dev/kmsg r,
+  /usr/share/terminfo/** r,
+
+  deny /{usr/,}local/bin/ r,
+  deny @{bin}/{,*/} r,
+
+  include if exists <local/dmesg>
+}

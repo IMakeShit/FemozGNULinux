@@ -1,0 +1,104 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/quiterss
+profile quiterss @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/X>
+  include <abstractions/gtk>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/freedesktop.org>
+  include <abstractions/qt5-settings-write>
+  include <abstractions/qt5-compose-cache-write>
+  include <abstractions/mesa>
+  include <abstractions/dri-enumerate>
+  include <abstractions/nameservice-strict>
+  include <abstractions/user-download-strict>
+  include <abstractions/wayland>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+  include <abstractions/gstreamer>
+  # This one is needed when you want to receive sound notifications
+  include <abstractions/audio>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+  network netlink dgram,
+
+  @{exec_path} mr,
+
+  @{bin}/xdg-open rCx -> open,
+
+  # To configure Qt5 settings (theme, font, icons, etc.) under DE/WM without Qt integration
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+  /usr/share/qt5ct/** r,
+
+  /usr/share/quiterss/** r,
+  owner @{user_config_dirs}/QuiteRss/ rw,
+  owner @{user_config_dirs}/QuiteRss/** rwkl -> @{user_config_dirs}/QuiteRss/**,
+  owner @{user_share_dirs}/QuiteRss/ rw,
+  owner @{user_share_dirs}/QuiteRss/** rwkl -> @{user_share_dirs}/QuiteRss/QuiteRss/**,
+  owner @{user_cache_dirs}/QuiteRss/ rw,
+  owner @{user_cache_dirs}/QuiteRss/** rwl -> @{user_cache_dirs}/QuiteRss/**,
+
+       owner @{PROC}/@{pid}/fd/ r,
+  deny       @{PROC}/sys/kernel/random/boot_id r,
+  deny owner @{PROC}/@{pid}/cmdline r,
+       owner @{PROC}/@{pid}/mountinfo r,
+       owner @{PROC}/@{pid}/mounts r,
+
+  /etc/fstab r,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /usr/share/hwdata/pnp.ids r,
+
+  /dev/shm/#@{int} rw,
+
+  owner /tmp/qtsingleapp-quiter-@{int}-@{int} rw,
+  owner /tmp/qtsingleapp-quiter-@{int}-@{int}-lockfile rwk,
+  owner /var/tmp/etilqs_@{hex} rw,
+
+  # Allowed apps to open
+  @{lib}/firefox/firefox rPUx,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+
+
+  profile open {
+    include <abstractions/base>
+    include <abstractions/xdg-open>
+
+    @{bin}/xdg-open mr,
+
+    @{sh_path}             rix,
+    @{bin}/{m,g,}awk       rix,
+    @{bin}/readlink        rix,
+    @{bin}/basename        rix,
+
+    owner @{HOME}/ r,
+
+    owner @{run}/user/@{uid}/ r,
+
+    # Allowed apps to open
+    @{lib}/firefox/firefox rPUx,
+
+    # file_inherit
+    owner @{HOME}/.xsession-errors w,
+
+  }
+
+  include if exists <local/quiterss>
+}

@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/zsysd @{bin}/zsysctl
+profile zsysd @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/nameservice-strict>
+
+  capability sys_ptrace,
+  capability sys_admin,
+
+  @{exec_path}                   rmix,
+  /{usr/,}{local/,}{s,}bin/zfs   rPx,
+  /{usr/,}{local/,}{s,}bin/zpool rPx,
+  # ALLOWED zsysd exec /usr/sbin/update-grub info="no new privs" comm=zsysd requested_mask=x denied_mask=x error=-1
+  @{bin}/update-grub    rPx,
+
+  /etc/hostid r,
+  /etc/zsys.conf r,
+  
+  /var/log/unattended-upgrades/unattended-upgrades-dpkg.log rw,
+
+  @{run}/systemd/notify rw,
+  @{run}/unattended-upgrades.pid r,
+  @{run}/zsys-snapshot.unattended-upgrades rw,
+  @{run}/zsysd.sock rw,
+
+  @{PROC}/@{pids}/stat r,
+  @{PROC}/@{pids}/mounts r,
+  @{PROC}/cmdline r,
+  @{PROC}/sys/kernel/spl/hostid r,
+
+  @{sys}/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+
+  /dev/pts/@{int} rw,
+  /dev/zfs rw,
+
+  include if exists <local/zsysd>
+}

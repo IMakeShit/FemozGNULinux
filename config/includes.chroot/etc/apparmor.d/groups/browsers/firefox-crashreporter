@@ -1,0 +1,61 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{name} = firefox{,.sh,-esr,-bin}
+@{lib_dirs} = @{lib}/@{name} /opt/@{name}
+@{config_dirs} = @{HOME}/.mozilla/
+@{cache_dirs} = @{user_cache_dirs}/mozilla/
+
+@{exec_path} = @{lib_dirs}/crashreporter
+profile firefox-crashreporter @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+  include <abstractions/desktop>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  signal (receive) set=(term, kill) peer=firefox,
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} mr,
+
+  @{lib_dirs}/minidump-analyzer rPx,
+
+  @{bin}/mv rix,
+
+  owner "@{config_dirs}/firefox/Crash Reports/{,**}" rw,
+  owner @{config_dirs}/*.*/crashes/{,**} rw,
+  owner @{config_dirs}/*.*/crashes/events/@{uuid} rw,
+  owner @{config_dirs}/*.*/extensions/*.xpi r,
+  owner @{config_dirs}/*.*/minidumps/{,**} rw,
+  owner @{config_dirs}/*.*/minidumps//@{uuid}.{dmp,extra} r,
+  owner @{config_dirs}/*.*/storage/default/* r,
+
+  owner @{cache_dirs}/firefox/*.*/** r,
+
+        /tmp/ r,
+    /var/tmp/ r,
+  owner /tmp/@{hex}.{dmp,extra} rw,
+  owner /tmp/firefox/.parentlock w,
+
+  owner /dev/shm/org.mozilla.ipc.@{int}.@{int} r,
+
+  /dev/dri/card@{int} rw,
+  /dev/dri/renderD128 rw,
+
+  # Silencer
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/firefox-crashreporter>
+}

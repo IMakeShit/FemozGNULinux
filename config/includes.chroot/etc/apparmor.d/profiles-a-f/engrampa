@@ -1,0 +1,112 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/engrampa
+profile engrampa @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.gtk.Private.RemoteVolumeMonitor>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+  include <abstractions/thumbnails-cache-read>
+  include <abstractions/user-download-strict>
+  include <abstractions/X-strict>
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member=GetId
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus receive bus=session path=/org/gtk/Application/anonymous
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*),
+
+  dbus receive bus=session path=/org/gtk/Application/anonymous{,/window/@{int}}
+       interface=org.gtk.Actions
+       member=DescribeAll
+       peer=(name=:*),
+
+  @{exec_path} mr,
+
+  @{sh_path}           rix,
+  @{bin}/ls            rix,
+  @{bin}/rm            rix,
+  @{bin}/mv            rix,
+  @{bin}/cp            rix,
+
+  # Archivers
+  @{bin}/7z            rix,
+  @{lib}/p7zip/7z      rix,
+  @{bin}/unrar-nonfree rix,
+  @{bin}/zip           rix,
+  @{bin}/unzip         rix,
+  @{bin}/tar           rix,
+  @{bin}/xz            rix,
+  @{bin}/bzip2         rix,
+  @{bin}/cpio          rix,
+  @{bin}/gzip          rix,
+  @{bin}/zstd          rix,
+  # For deb packages
+  @{bin}/dpkg-deb      rix,
+
+  @{open_path}         rPx -> child-open,
+
+  # Allowed apps to open
+  @{bin}/engrampa   rPx,
+  @{bin}/geany      rPx,
+  @{bin}/viewnior  rPUx,
+  @{bin}/spacefm    rPx,
+  @{bin}/ristretto rPUx,
+
+  /usr/share/engrampa/{,**} r,
+  /usr/share/**.desktop r,
+
+  /etc/magic r,
+  /etc/fstab r,
+
+  / r,
+  /home/ r,
+  @{MOUNTS}/ r,
+  @{MOUNTS}/** rw,
+
+  owner @{user_cache_dirs}/ rw,
+  owner @{user_cache_dirs}/.fr-*/{,**} rw,
+
+  owner @{user_config_dirs}/ r,
+  owner @{user_config_dirs}/engrampa/ rw,
+  owner @{user_config_dirs}/mimeapps.list{,.@{rand6}} rw,
+
+  owner @{user_share_dirs}/ r,
+
+        /tmp/ r,
+  owner /tmp/** rw,
+
+  @{run}/mount/utab r,
+
+        @{PROC}/@{pid}/mountinfo r,
+        @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/engrampa>
+}

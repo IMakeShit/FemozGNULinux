@@ -1,0 +1,23 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gdk-pixbuf-query-loaders
+profile gdk-pixbuf-query-loaders @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} mr,
+
+  @{lib}/gdk-pixbuf-[0-9].@{int}/{,*}/loaders.cache.* rw,
+  @{lib}/gdk-pixbuf-[0-9].@{int}/*/loaders.cache rw,
+
+  include if exists <local/gdk-pixbuf-query-loaders>
+}

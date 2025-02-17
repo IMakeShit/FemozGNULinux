@@ -1,0 +1,89 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-journald
+profile systemd-journald @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/systemd-common>
+
+  capability audit_control,
+  capability audit_read,
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability kill,
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+  capability sys_ptrace,
+  capability syslog,
+
+  network netlink raw,
+
+  ptrace (read),
+
+  @{exec_path} mr,
+
+  /etc/systemd/journald.conf r,
+
+  @{run}/log/ rw,
+  /{run,var}/log/journal/ rw,
+  /{run,var}/log/journal/@{md5}/ rw,
+  /{run,var}/log/journal/@{md5}/* rwl -> /{run,var}/log/journal/@{md5}/#@{int},
+
+  owner @{run}/systemd/journal/{,**} rw,
+  owner @{run}/systemd/notify rw,
+
+  @{run}/host/container-manager r,
+  @{run}/utmp rk,
+
+  @{run}/udev/data/+acpi:*      r,
+  @{run}/udev/data/+bluetooth:* r,
+  @{run}/udev/data/+hid:* r,              # for HID-Compliant Keyboard
+  @{run}/udev/data/+input:input@{int} r,  # for mouse, keyboard, touchpad
+  @{run}/udev/data/+pci:*       r,
+  @{run}/udev/data/+platform:*   r,
+  @{run}/udev/data/+scsi:*      r,
+  @{run}/udev/data/+sdio:*      r,
+  @{run}/udev/data/+thunderbolt:* r,
+  @{run}/udev/data/+usb-serial:* r,
+  @{run}/udev/data/+usb:*       r,
+  @{run}/udev/data/+virtio:*    r,
+  @{run}/udev/data/b254:@{int} r,         # for /dev/zram*
+  @{run}/udev/data/b259:@{int} r,
+  @{run}/udev/data/c1:@{int}    r,        # For RAM disk
+  @{run}/udev/data/c4:@{int} r,           # For TTY devices
+  @{run}/udev/data/c10:@{int}   r,        # For non-serial mice, misc features
+  @{run}/udev/data/c108:@{int} r,         # For /dev/ppp
+  @{run}/udev/data/c18[8-9]:@{int} r,     # USB devices & USB serial converters
+  @{run}/udev/data/c29:@{int} r,          # For CD-ROM
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+  @{sys}/devices/**/uevent r,
+  @{sys}/firmware/efi/efivars/SecureBoot-@{uuid} r,
+  @{sys}/module/printk/parameters/time r,
+
+  @{PROC}/@{pids}/attr/current r,
+  @{PROC}/@{pids}/cgroup r,
+  @{PROC}/@{pids}/cmdline r,
+  @{PROC}/@{pids}/comm r,
+  @{PROC}/@{pids}/loginuid r,
+  @{PROC}/@{pids}/sessionid r,
+  @{PROC}/pressure/* r,
+  @{PROC}/sys/kernel/hostname r,
+
+  /dev/kmsg rw,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  include if exists <local/systemd-journald>
+}

@@ -1,0 +1,99 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gdm/}gdm-wayland-session
+profile gdm-wayland-session @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bash>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.systemd1-session>
+  include <abstractions/bus/org.gnome.DisplayManager>
+  include <abstractions/consoles>
+  include <abstractions/dconf-write>
+  include <abstractions/nameservice-strict>
+  include <abstractions/zsh>
+
+  signal (receive) set=(hup) peer=@{systemd},
+  signal (receive) set=term peer=gdm{,-session-worker},
+  signal (send) set=(term) peer=dbus-run-session,  
+  signal (send) set=(term) peer=dbus-daemon,
+  signal (send) set=(term) peer=gnome-session-binary,
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  @{sh_path}                  rix,
+  @{bin}/cat                  rix,
+  @{bin}/env                  rix,
+  @{bin}/gettext              rix,
+  @{bin}/gettext.sh             r,
+  @{bin}/gnome-session        rix,
+  @{bin}/grep                 rix,
+  @{bin}/gsettings            rPx,
+  @{bin}/head                 rix,
+  @{bin}/id                   rix,
+  @{bin}/locale               rix,
+  @{bin}/locale-check         rix,
+  @{bin}/manpath              rix,
+  @{bin}/qmake                rix,
+  @{bin}/readlink             rix,
+  @{bin}/sed                  rix,
+  @{bin}/sort                 rix,
+  @{bin}/tr                   rix,
+  @{bin}/tty                  rix,
+  @{bin}/uname                rix,
+  @{bin}/zsh                  rix,
+
+  @{lib}/gnome-session-binary  rPx,
+  @{bin}/dbus-daemon          rPx,
+  @{bin}/dbus-run-session     rPx,
+  @{bin}/dpkg-query           rpx,
+  @{bin}/flatpak             rPUx,
+
+  /usr/share/bash-completion/{,**} r,
+  /usr/share/gdm/gdm.schemas r,
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+  /usr/share/im-config/{,**} r,
+  /usr/share/libdebuginfod-common/debuginfod.sh r,
+  /usr/share/xsessions/gnome.desktop r,
+
+  @{etc_ro}/profile.d/{,*} r,
+  /etc/debuginfod/{,*} r,
+  /etc/default/im-config r,
+  /etc/gdm{3,}/custom.conf r,
+  /etc/gdm{3,}/daemon.conf r,
+  /etc/locale.conf r,
+  /etc/manpath.config r,
+  /etc/shells r,
+  /etc/sysconfig/console r,
+  /etc/sysconfig/displaymanager r,
+  /etc/sysconfig/language r,
+  /etc/sysconfig/mail r,
+  /etc/sysconfig/proxy r,
+  /etc/sysconfig/windowmanager r,
+  /etc/X11/xinit/xinputrc r,
+  /etc/X11/Xsession.d/*im-config_launch r,
+
+  owner @{HOME}/.alias r,
+  owner @{HOME}/.i18n r,
+
+  @{run}/gdm{3,}/custom.conf r,
+
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/loginuid r,
+
+  /dev/tty@{int} rw,
+
+  include if exists <local/gdm-wayland-session>
+}

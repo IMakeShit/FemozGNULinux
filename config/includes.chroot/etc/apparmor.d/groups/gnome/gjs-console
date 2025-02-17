@@ -1,0 +1,98 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# TODO: GNOME JavaScript interpreter. It is used to run some gnome internal app
+# as well as third party extensions. Therefore, by default, some extension are
+# confined under this profile. The resulting profile is quite broad.
+# This architecture needs to be rethinked.
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gjs-console
+profile gjs-console @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/bus/org.gnome.Shell.Introspect>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=(term hup) peer=gdm*,
+
+  # dbus: own bus=session name=org.freedesktop.Notifications
+  # dbus: own bus=session name=org.gnome.ScreenSaver
+  # dbus: own bus=session name=org.gnome.Shell.Extensions
+  # dbus: own bus=session name=org.gnome.Shell.Notifications
+  # dbus: own bus=session name=org.gnome.Shell.Screencast
+
+  dbus send bus=session path=/org/gnome/Mutter/ScreenCast
+       interface=org.freedesktop.DBus.Properties
+       peer=(name=:*, label=gnome-shell),
+
+  dbus send bus=session path=/org/gnome/ScreenSaver
+       interface=org.gnome.ScreenSaver
+       member=GetActive
+       peer=(name=org.gnome.Shell.ScreenShield, label=gnome-shell),
+
+  dbus send bus=session path=/org/gnome/Shell
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=gnome-shell),
+  dbus send bus=session path=/org/gnome/Shell
+       interface=org.gnome.Shell.Extensions
+       member=ListExtensions
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  @{bin}/       r,
+  @{bin}/*   rPUx,
+  @{lib}/**  rPUx,
+
+  /usr/share/gnome-shell/extensions/gsconnect@andyholmes.github.io/{service/daemon.js,gsconnect-preferences} rPx,
+  @{user_share_dirs}/gnome-shell/extensions/gsconnect@andyholmes.github.io/{service/daemon.js,gsconnect-preferences} rPx,
+
+  /etc/openni2/OpenNI.ini r,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/gdm/greeter-dconf-defaults r,
+  /usr/share/gnome-shell/{,**} r,
+  /usr/share/icu/@{int}.@{int}/*.dat r,
+
+  /var/lib/gdm{3,}/.cache/fontconfig/[a-f0-9]*.cache-?{,.NEW,.LCK,.TMP-*} rwl,
+  /var/lib/gdm{3,}/.cache/gstreamer-1.0/ rw,
+  /var/lib/gdm{3,}/.cache/gstreamer-1.0/registry.*.bin{,.tmp@{rand6}} rw,
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+
+  /tmp/ r,
+  /var/tmp/ r,
+
+  owner @{user_share_dirs}/gnome-shell/extensions/{,**} r,
+  owner @{user_cache_dirs}/gstreamer-1.0/ rw,
+  owner @{user_cache_dirs}/gstreamer-1.0/registry.*.bin{,.tmp@{rand6}} rw,
+
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/stat r,
+  owner @{PROC}/@{pid}/task/ r,
+  owner @{PROC}/@{pid}/task/@{tid}/stat r,
+
+  /dev/ r,
+  /dev/tty rw,
+  /dev/tty@{int} rw,
+
+  include if exists <local/gjs-console>
+}

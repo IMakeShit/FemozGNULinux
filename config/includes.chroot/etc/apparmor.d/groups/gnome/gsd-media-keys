@@ -1,0 +1,127 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/gsd-media-keys
+profile gsd-media-keys @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.hostname1>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/bus/org.gnome.Mutter.IdleMonitor>
+  include <abstractions/bus/org.gnome.SessionManager>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=(term, hup) peer=gdm*,
+
+  network netlink raw,
+
+  # dbus: own bus=session name=org.gnome.SettingsDaemon.MediaKeys
+
+  dbus send bus=system path=/org/freedesktop/login1
+       interface=org.freedesktop.login1.Manager
+       member=PowerOff
+       peer=(name=:*, label=systemd-logind),
+
+  dbus send bus=system path=/org/freedesktop/UPower{,/devices/DisplayDevice}
+      interface=org.freedesktop.DBus.Properties
+      member=GetAll
+      peer=(name=:*, label=upowerd),
+
+  dbus send bus=session path=/org/gnome/Shell
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=gnome-shell),
+  dbus send bus=session path=/org/gnome/Shell
+       interface=org.gnome.Shell
+       member={GrabAccelerators,UngrabAccelerators}
+       peer=(name=:*, label=gnome-shell),
+  dbus receive bus=session path=/org/gnome/Shell
+       interface=org.freedesktop.DBus.Properties
+       member={GetAll,PropertiesChanged}
+       peer=(name=:*, label=gnome-shell),
+  dbus receive bus=session path=/org/gnome/Shell
+       interface=org.gnome.Shell
+       member=AcceleratorActivated
+       peer=(name=:*, label=gnome-shell),
+
+  dbus send bus=session path=/org/gnome/SettingsDaemon/Rfkill
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=gsd-rfkill),
+  dbus receive bus=session path=/org/gnome/SettingsDaemon/Rfkill
+       interface=org.freedesktop.DBus.Properties
+       member=PropertiesChanged
+       peer=(name=:*, label=gsd-rfkill),
+
+  dbus send bus=session path=/
+       interface=org.freedesktop.DBus
+       member=ListNames
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus send bus=session path=/org/gnome/SettingsDaemon/Power
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=gsd-power),
+
+  dbus receive bus=session path=/org/gnome/SettingsDaemon/Power
+       interface=org.freedesktop.DBus.Properties
+       member=PropertiesChanged
+       peer=(name=:*, label=gsd-power),
+
+  dbus send bus=session path=/org/mpris/MediaPlayer2
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*),
+
+  @{exec_path} mr,
+
+  @{open_path}         rPx -> child-open,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/gdm/greeter-dconf-defaults r,
+  /usr/share/sounds/freedesktop/stereo/*.oga r,
+
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+  /var/lib/gdm{3,}/.config/pulse/client.conf r,
+  /var/lib/gdm{3,}/.config/pulse/cookie rk,
+
+  /var/lib/flatpak/exports/share/applications/{,mimeinfo.cache} r,
+
+  owner @{user_config_dirs}/pulse/ rw,
+
+  owner @{user_share_dirs}/event-sound-cache.tdb.* rwk,
+  owner @{user_share_dirs}/recently-used.xbel{,.*} rw,
+
+  @{run}/systemd/inhibit/[0-9]*.ref rw,
+
+  @{run}/udev/data/+sound:card@{int} r,   # For sound
+  @{run}/udev/data/c13:@{int} r,          # for /dev/input/*
+  @{run}/udev/data/c189:@{int} r,         # For /dev/bus/usb/**
+
+  @{sys}/devices/**/usb[0-9]/{,**} r,
+  @{sys}/devices/@{pci}/sound/**/uevent r,
+  @{sys}/devices/platform/**/uevent r,
+  @{sys}/devices/virtual/**/uevent r,
+
+        @{PROC}/1/cgroup r,
+  owner @{PROC}/@{pid}/cgroup r,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/gsd-media-keys>
+}

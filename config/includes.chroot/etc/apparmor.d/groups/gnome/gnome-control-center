@@ -1,0 +1,170 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gnome-control-center
+profile gnome-control-center @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/nameservice-strict>
+  include <abstractions/p11-kit>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  signal (send) set=(kill) peer=unconfined,
+  signal (send) set=(kill) peer=passwd,
+
+  unix (send, receive, connect) type=stream peer=(addr="@/home/*/.cache/ibus/dbus-????????", label=ibus-daemon),
+
+  dbus bus=accessibility,
+  dbus bus=session,
+  dbus bus=system,
+
+  @{exec_path} mr,
+
+  @{bin}/@{shells}     rUx,
+
+  @{bin}/gcm-viewer    rix,
+  @{bin}/grep          rix,
+  @{bin}/locale        rix,
+  @{bin}/sed           rix,
+
+  @{bin}/bwrap                                  rPUx,
+  @{bin}/gkbd-keyboard-display                  rPUx,
+  @{bin}/gnome-software                         rPUx,
+  @{bin}/openvpn                                 rPx,
+  @{bin}/passwd                                  rPx,
+  @{bin}/pkexec                                  rPx,
+  @{bin}/software-properties-gtk                 rPx,
+  @{bin}/usermod                                 rPx,
+  @{lib}/{,@{multiarch}/}webkit{,2}gtk-*/WebKitNetworkProcess rPx,
+  @{lib}/cups/backend/snmp                       rPx,
+  @{lib}/gnome-control-center-goa-helper         rPx,
+  @{lib}/gnome-control-center-print-renderer     rPx,
+  /usr/share/language-tools/language2locale      rix,
+  /usr/share/language-tools/language-options    rPUx,
+
+  /opt/**/share/icons/{,**} r,
+  /snap/*/@{int}/**.png r,
+  /usr/share/backgrounds/{,**} r,
+  /usr/share/cups/data/testprint r,
+  /usr/share/desktop-base/**.{xml,png,svg} r,
+  /usr/share/firefox{,-esr}/browser/chrome/icons/{,**} r,
+  /usr/share/gnome-background-properties/{,**} r,
+  /usr/share/gnome-bluetooth{-*,}/{,**} r,
+  /usr/share/gnome-color-manager/{,**} r,
+  /usr/share/gnome-control-center/{,**} r,
+  /usr/share/gnome-shell/search-providers/{,**} r,
+  /usr/share/gnome/gnome-version.xml r,
+  /usr/share/language-tools/main-countries r,
+  /usr/share/pipewire/client.conf r,
+  /usr/share/thumbnailers/{,*} r,
+  /usr/share/wallpapers/{,**} r,
+  /usr/share/xml/iso-codes/{,**} r,
+
+  /etc/cups/client.conf r,
+  /etc/machine-info r,
+  /etc/pipewire/client.conf.d/{,**} r,
+  /etc/rygel.conf r,
+  /etc/security/pwquality.conf r,
+  /etc/security/pwquality.conf.d/{,**} r,
+
+  /etc/fstab r,
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  /var/cache/cracklib/cracklib_dict.* r,
+  /var/cache/samba/ rw,
+  /var/lib/AccountsService/icons/* r,
+
+  owner @{HOME}/.cat_installer/ca.pem r,
+  owner @{HOME}/.cert/nm-openvpn/*.pem r,
+  owner @{HOME}/.face r,
+  owner @{HOME}/@{XDG_WALLPAPERS_DIR}/{,**} r,
+
+  owner @{user_cache_dirs}/gnome-control-center/{,**} rw,
+  owner @{user_cache_dirs}/thumbnails/{,**} rw,
+
+  owner @{user_config_dirs}/gnome-control-center/{,**} rw,
+  owner @{user_config_dirs}/ibus/bus/ r,
+  owner @{user_config_dirs}/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+  owner @{user_config_dirs}/mimeapps.list{,.@{rand6}} rw,
+  owner @{user_config_dirs}/rygel.conf{,.@{rand6}} rw,
+
+  owner @{user_games_dirs}/**.png r,
+
+  owner @{user_share_dirs}/backgrounds/{,**} rw,
+  owner @{user_share_dirs}/gnome-remote-desktop/ w,
+  owner @{user_share_dirs}/gnome-remote-desktop/rdp-tls.{crt,key}{,.@{rand6}} rw,
+  owner @{user_share_dirs}/icc/{,edid-*} r,
+  owner @{user_share_dirs}/sounds/__custom/{,*} rw,
+
+  owner /tmp/gdkpixbuf-xpm-tmp.@{rand6} rw,
+
+        @{run}/cups/cups.sock rw,
+        @{run}/samba/ rw,
+        @{run}/systemd/sessions/  r,
+        @{run}/systemd/sessions/* r,
+        @{run}/systemd/users/@{uid} r,
+  owner @{run}/user/@{uid}/gnome-control-center-region-needs-restart w,
+  owner @{run}/user/@{uid}/gnome-shell-disable-extensions w,
+  owner @{run}/user/@{uid}/gvfsd/socket-@{rand8} rw,
+  owner @{run}/user/@{uid}/pipewire-@{int} rw,
+
+  @{run}/udev/data/+dmi:* r,
+  @{run}/udev/data/+input:input@{int} r,  # for mouse, keyboard, touchpad
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/c13:@{int} r,          # for /dev/input/*
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+  @{run}/udev/data/n@{int} r,
+
+  @{sys}/bus/ r,
+  @{sys}/class/ r,
+  @{sys}/class/input/ r,
+  @{sys}/devices/**/{name,vendor,product,uevent} r,
+  @{sys}/devices/**/power_supply/{,**} r,
+  @{sys}/devices/platform/**/uevent r,
+  @{sys}/devices/virtual/**/uevent r,
+  @{sys}/devices/virtual/dmi/id/chassis_type r,
+  @{sys}/devices/virtual/thermal/thermal_zone[0-9]/hwmon[0-9]/temp* r,
+  @{sys}/firmware/acpi/pm_profile r,
+
+  owner @{sys}/fs/cgroup/user.slice/user-@{uid}.slice/user@@{uid}.service/{,**} rw,
+
+        @{PROC}/cmdline r,
+        @{PROC}/zoneinfo r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/fdinfo/@{int} r,
+  owner @{PROC}/@{pid}/loginuid r,
+  owner @{PROC}/@{pid}/maps r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/stat r,
+  owner @{PROC}/@{pid}/statm r,
+  owner @{PROC}/@{pid}/task/*/comm rw,
+
+  /dev/ r,
+  /dev/media@{int} r,
+  /dev/video@{int} rw,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/gnome-control-center>
+}

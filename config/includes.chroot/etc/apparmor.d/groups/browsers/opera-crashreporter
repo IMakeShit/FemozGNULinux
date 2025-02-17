@@ -1,0 +1,37 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{name} = opera{,-beta,-developer}
+@{lib_dirs} = @{lib}/@{multiarch}/@{name}
+@{config_dirs} = @{user_config_dirs}/@{name}
+
+@{exec_path} = @{lib_dirs}/opera_crashreporter
+profile opera-crashreporter @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/nameservice>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  ptrace (trace, read) peer=opera,
+
+  @{exec_path} mr,
+
+  owner @{config_dirs}/crash_count.txt rwk,
+  owner @{config_dirs}/GPUCache/data_* r,
+  owner @{config_dirs}/GPUCache/index r,
+
+  owner @{PROC}/@{pids}/cmdline r,
+  owner @{PROC}/@{pids}/environ r,
+  owner @{PROC}/@{pids}/task/ r,
+
+  include if exists <local/opera-crashreporter>
+}

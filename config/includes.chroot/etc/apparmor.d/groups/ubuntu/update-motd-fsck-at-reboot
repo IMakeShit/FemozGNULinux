@@ -1,0 +1,51 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/update-notifier/update-motd-fsck-at-reboot
+profile update-motd-fsck-at-reboot @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  @{bin}/dumpe2fs      rPx,
+  @{sh_path}           rix,
+  @{bin}/{m,g,}awk     rix,
+  @{bin}/cat           rix,
+  @{bin}/cut           rix,
+  @{bin}/date          rix,
+  @{bin}/grep          rix,
+  @{bin}/id            rix,
+  @{bin}/mount         rCx -> mount,
+  @{bin}/stat          rix,
+
+  /var/lib/update-notifier/fsck-at-reboot rw,
+
+  @{PROC}/uptime r,
+
+  /dev/tty@{int} rw,
+
+  profile mount {
+    include <abstractions/base>
+
+    @{bin}/mount mr,
+
+    @{run}/mount/utab r,
+
+    @{sys}/devices/virtual/block/**/ r,
+    @{sys}/devices/virtual/block/**/autoclear r,
+    @{sys}/devices/virtual/block/**/backing_file r,
+    @{sys}/devices/virtual/block/dm-@{int}/dm/name r,
+
+    @{PROC}/@{pid}/mountinfo r,
+
+    /dev/tty@{int} rw,
+
+  }
+
+  include if exists <local/update-motd-fsck-at-reboot>
+}

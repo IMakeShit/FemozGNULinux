@@ -1,0 +1,45 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/apt-show-versions
+profile apt-show-versions @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/perl>
+  include <abstractions/apt-common>
+
+  @{exec_path} r,
+  @{bin}/perl r,
+  @{sh_path}        rix,
+
+  @{bin}/dpkg       rPx -> child-dpkg,
+  @{bin}/apt-get    rPx,
+
+  # apt-helper gets "no new privs" so "rix" it
+  @{lib}/apt/apt-helper rix,
+
+  owner /var/cache/apt-show-versions/{a,i}packages-multiarch rw,
+  owner /var/cache/apt-show-versions/files rw,
+
+  /var/cache/apt/ r,
+  /var/cache/apt/** rwk,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  @{user_build_dirs}/** rwkl -> @{user_build_dirs}/**,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+  owner /var/log/cron-apt/temp w,
+
+  include if exists <local/apt-show-versions>
+}

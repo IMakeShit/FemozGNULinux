@@ -1,0 +1,144 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2024 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-logind
+profile systemd-logind @{exec_path} flags=(attach_disconnected,complain) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/consoles>
+  include <abstractions/devices-usb>
+  include <abstractions/disks-write>
+  include <abstractions/nameservice-strict>
+  include <abstractions/systemd-common>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability sys_admin,
+  capability sys_tty_config,
+
+  network netlink raw,
+
+  # mqueue r type=posix /,
+
+  unix (bind) type=stream addr=@@{hex}/bus/systemd-logind/system,
+
+  # dbus: own bus=system name=org.freedesktop.login1
+
+  # dbus: talk bus=system name=org.freedesktop.systemd1 label="@{systemd}"
+
+  dbus receive bus=system path=/org/freedesktop/login@{int}{,/seat/auto,session/_@{int}}
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(label=ksmserver-logout-greeter),
+
+  dbus send bus=system path=/org/freedesktop/systemd1
+       interface=org.freedesktop.systemd1.Manager
+       peer=(name=org.freedesktop.systemd1),
+
+  dbus send bus=system path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID,GetConnectionCredentials}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  @{exec_path} mr,
+
+  /etc/machine-id r,
+  /etc/systemd/logind.conf r,
+  /etc/systemd/sleep.conf r,
+  /etc/systemd/logind.conf.d/{,**} r,
+
+  / r,
+  /boot/{,**} r,
+  /efi/{,**} r,
+  /swap.img r,
+  /swap/swapfile r,
+  /swapfile r,
+
+  /var/lib/systemd/linger/ r,
+
+  @{run}/.#nologin* rw,
+  @{run}/host/container-manager r,
+  @{run}/nologin rw,
+  @{run}/utmp rk,
+
+  @{run}/udev/tags/master-of-seat/ r,
+  @{run}/udev/tags/power-switch/ r,
+  @{run}/udev/tags/uaccess/ r,
+  @{run}/udev/static_node-tags/uaccess/ r,
+
+  @{run}/udev/data/+backlight:* r,
+  @{run}/udev/data/+drm:card@{int}-* r,   # For screen outputs
+  @{run}/udev/data/+input:input@{int} r,  # for mouse, keyboard, touchpad
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/c10:@{int}   r,        # For non-serial mice, misc features
+  @{run}/udev/data/c13:@{int} r,          # For /dev/input/*
+  @{run}/udev/data/c14:@{int} r,          # Open Sound System (OSS)
+  @{run}/udev/data/c21:@{int} r,          # Generic SCSI access
+  @{run}/udev/data/c29:@{int} r,          # For /dev/fb[0-9]*
+  @{run}/udev/data/c81:@{int}  r,         # For video4linux
+  @{run}/udev/data/c89:@{int} r,          # For I2C bus interface
+  @{run}/udev/data/c116:@{int} r,         # For ALSA
+  @{run}/udev/data/c226:@{int} r,         # For /dev/dri/card*
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+  @{run}/systemd/inhibit/ rw,
+  @{run}/systemd/inhibit/.#* rw,
+  @{run}/systemd/inhibit/[0-9]*{,.ref} rw,
+  @{run}/systemd/journal/socket rw,
+  @{run}/systemd/notify rw,
+  @{run}/systemd/seats/ rw,
+  @{run}/systemd/seats/.#seat* rw,
+  @{run}/systemd/seats/seat@{int} rw,
+  @{run}/systemd/sessions/{,*}  rw,
+  @{run}/systemd/sessions/*.ref rw,
+  @{run}/systemd/shutdown/.#scheduled* rw,
+  @{run}/systemd/shutdown/scheduled rw,
+  @{run}/systemd/users/ rw,
+  @{run}/systemd/users/.#* rw,
+  @{run}/systemd/users/@{uid} rw,
+
+  @{sys}/class/drm/ r,
+  @{sys}/class/power_supply/ r,
+  @{sys}/devices/** r,
+  @{sys}/devices/**/brightness rw,
+  @{sys}/devices/virtual/tty/tty@{int}/active r,
+  @{sys}/firmware/efi/efivars/LoaderEntries-@{uuid} r,
+  @{sys}/firmware/efi/efivars/LoaderFeatures-@{uuid} r,
+  @{sys}/firmware/efi/efivars/LoaderInfo-@{uuid} r,
+  @{sys}/firmware/efi/efivars/OsIndications-@{uuid} r,
+  @{sys}/firmware/efi/efivars/OsIndicationsSupported-@{uuid} r,
+  @{sys}/fs/cgroup/memory.max r,
+  @{sys}/fs/cgroup/memory/memory.limit_in_bytes r,
+  @{sys}/kernel/kexec_loaded r,
+  @{sys}/module/vt/parameters/default_utf8 r,
+  @{sys}/power/{state,resume_offset,resume,disk} r,
+
+        @{PROC}/@{pid}/cgroup r,
+        @{PROC}/@{pid}/comm r,
+        @{PROC}/@{pid}/fd/ r,
+        @{PROC}/@{pid}/mountinfo r,
+        @{PROC}/@{pid}/sessionid r,
+        @{PROC}/@{pid}/stat r,
+        @{PROC}/1/cmdline r,
+        @{PROC}/pressure/* r,
+        @{PROC}/swaps r,
+        @{PROC}/sysvipc/{shm,sem,msg} r,
+  owner @{PROC}/@{pid}/fdinfo/@{int} r,
+
+        /dev/dri/card@{int} rw,
+        /dev/input/event@{int} rw,  # Input devices (keyboard, mouse, etc)
+        /dev/mqueue/ r,
+        /dev/tty@{int} rw,
+  owner /dev/shm/{,**/} rw,
+
+  include if exists <local/systemd-logind>
+}

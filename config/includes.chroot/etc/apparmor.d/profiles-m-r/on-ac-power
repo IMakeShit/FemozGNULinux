@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/on_ac_power
+profile on-ac-power @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/{m,g,}awk  rix,
+  @{bin}/cat        rix,
+
+  @{sys}/class/power_supply/ r,
+  @{sys}/devices/**/power_supply/**/{online,type} r,
+
+  @{PROC}/pmu/info r,
+  @{PROC}/apm r,
+
+  # For shell pwd
+  / r,
+  owner @{HOME}/ r,
+
+  include if exists <local/on-ac-power>
+}

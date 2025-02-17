@@ -1,0 +1,28 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,ibus/}ibus-memconf
+profile ibus-memconf @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(term) peer=ibus-daemon,
+
+  @{exec_path} mr,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  /var/lib/gdm{3,}/.config/ibus/bus/ r,
+  /var/lib/gdm{3,}/.config/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+
+  owner /var/lib/gdm{3,}/.cache/ibus/dbus-@{rand8} rw,
+
+  include if exists <local/ibus-memconf>
+}

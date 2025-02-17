@@ -1,0 +1,43 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-localed
+profile systemd-localed @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/consoles>
+  include <abstractions/systemd-common>
+
+  # Needed?
+  audit capability net_admin,
+
+  unix (bind) type=stream addr=@@{hex}/bus/systemd-localed/system,
+
+  # dbus: own bus=system name=org.freedesktop.locale1
+
+  @{exec_path} mr,
+
+  /usr/share/kbd/keymaps/{,**} r,
+  /usr/share/systemd/*-map r,
+  /usr/share/X11/xkb/{,**} r,
+
+  /etc/.#vconsole.conf* rw,
+  /etc/default/.#locale* rw,
+  /etc/default/keyboard r,
+  /etc/default/locale rw,
+  /etc/locale.conf r,
+  /etc/vconsole.conf rw,
+  /etc/X11/xorg.conf.d/ r,
+  /etc/X11/xorg.conf.d/.#*.confd* rw,
+  /etc/X11/xorg.conf.d/*.conf rw,
+
+  @{run}/systemd/notify rw,
+
+  include if exists <local/systemd-localed>
+}

@@ -1,0 +1,15 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+  owner @{HOME}/@{XDG_DESKTOP_DIR}/ w,
+  owner @{HOME}/@{XDG_DOWNLOAD_DIR}/ w,
+
+  owner @{HOME}/@{XDG_DESKTOP_DIR}/ r,
+  owner @{HOME}/@{XDG_DESKTOP_DIR}/** rwkl,
+
+  owner @{user_download_dirs}/ r,
+  owner @{user_download_dirs}/** rwkl,
+
+  include if exists <abstractions/user-download-strict.d>

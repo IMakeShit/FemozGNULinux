@@ -1,0 +1,173 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/inxi
+profile inxi @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/perl>
+  include <abstractions/openssl>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} r,
+  @{bin}/perl r,
+
+  @{bin}/ r,
+  @{sh_path}        rix,
+  @{bin}/zsh        rix,
+  @{bin}/tty        rix,
+  @{bin}/tput       rix,
+  @{bin}/getconf    rix,
+  @{bin}/file       rix,
+
+  @{lib}/llvm-[0-9]*/bin/clang      rix,
+  @{bin}/{,@{multiarch}-}gcc-[0-9]* rix,
+
+  @{bin}/ip              rCx -> ip,
+  @{lib}/systemd/systemd rCx -> systemd,
+  @{bin}/kmod            rCx -> kmod,
+  @{bin}/udevadm         rCx -> udevadm,
+
+  @{bin}/systemctl  rPx -> child-systemctl,
+
+  # Do not strip env to avoid errors like the following:
+  #  ERROR: ld.so: object 'libfakeroot-sysv.so' from LD_PRELOAD cannot be preloaded (cannot open
+  #  shared object file): ignored.
+  @{bin}/dpkg-query rpx,
+
+  @{bin}/blockdev   rPx,
+  @{bin}/compton    rPx,
+  @{bin}/df         rPx,
+  @{bin}/dig        rPx,
+  @{bin}/dmidecode  rPx,
+  @{bin}/glxinfo    rPx,
+  @{bin}/hddtemp    rPx,
+  @{bin}/lsblk      rPx,
+  @{bin}/lspci      rPx,
+  @{bin}/lsusb      rPx,
+  @{bin}/openbox    rPx,
+  @{bin}/ps         rPx,
+  @{bin}/sensors    rPx,
+  @{bin}/smartctl   rPx,
+  @{bin}/sudo       rPx,
+  @{bin}/uptime     rPx,
+  @{bin}/who        rPx,
+  @{bin}/xdpyinfo   rPx,
+  @{bin}/xprop      rPx,
+  @{bin}/xrandr     rPx,
+  @{bin}/xset       rPx,
+
+  /etc/ r,
+  /etc/inxi.conf r,
+  /etc/issue r,
+  /etc/magic r,
+  /etc/apt/sources.list r,
+  /etc/apt/sources.list.d/{,*.list} r,
+
+  /var/log/ r,
+  /var/log/Xorg.@{int}.log r,
+
+  /home/ r,
+  @{user_share_dirs}/xorg/ r,
+  @{user_share_dirs}/xorg/Xorg.@{int}.log r,
+
+  # For shell pwd
+  /root/ r,
+
+  @{run}/ r,
+
+  @{PROC}/asound/ r,
+  @{PROC}/asound/version r,
+  @{PROC}/sys/kernel/hostname r,
+  @{PROC}/swaps r,
+  @{PROC}/partitions r,
+  @{PROC}/scsi/scsi r,
+  @{PROC}/cmdline r,
+  @{PROC}/version r,
+  @{PROC}/sys/vm/swappiness r,
+  @{PROC}/sys/vm/vfs_cache_pressure r,
+  @{PROC}/sys/dev/cdrom/info r,
+  @{PROC}/1/comm r,
+
+  /dev/ r,
+  /dev/mapper/ r,
+  /dev/disk/*/ r,
+  /dev/dm-[0-9]* r,
+
+  @{sys}/class/power_supply/ r,
+  @{sys}/class/net/ r,
+  @{sys}/firmware/acpi/tables/ r,
+  @{sys}/bus/usb/devices/ r,
+  @{sys}/devices/{,**} r,
+  @{sys}/module/*/version r,
+  @{sys}/power/wakeup_count r,
+
+
+  profile ip {
+    include <abstractions/base>
+
+    network netlink raw,
+
+    @{bin}/ip mr,
+
+    @{sys}/devices/@{pci}/net/*/{duplex,address,speed,operstate} r,
+
+    /etc/iproute2/group r,
+
+  }
+
+  profile systemd {
+    include <abstractions/base>
+
+    @{lib}/systemd/systemd mr,
+
+    /etc/systemd/user.conf r,
+
+    owner @{PROC}/@{pid}/stat r,
+          @{PROC}/sys/kernel/pid_max r,
+          @{PROC}/sys/kernel/threads-max r,
+          @{PROC}/1/cgroup r,
+
+  }
+
+  profile udevadm {
+    include <abstractions/base>
+
+    @{bin}/udevadm mr,
+
+    /etc/udev/udev.conf r,
+
+    owner @{PROC}/@{pid}/stat r,
+          @{PROC}/cmdline r,
+          @{PROC}/1/sched r,
+          @{PROC}/1/environ r,
+          @{PROC}/sys/kernel/osrelease r,
+
+    @{sys}/devices/@{pci}/block/**/uevent r,
+    @{run}/udev/data/b* r,
+
+  }
+
+  profile kmod {
+    include <abstractions/base>
+
+    @{bin}/kmod mr,
+
+    @{PROC}/cmdline r,
+    @{PROC}/modules r,
+
+  }
+
+  include if exists <local/inxi>
+}

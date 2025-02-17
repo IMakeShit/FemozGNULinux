@@ -1,0 +1,55 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/mono-sgen
+profile mono-sgen @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/dri-common>
+  include <abstractions/dri-enumerate>
+  include <abstractions/freedesktop.org>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/ssl_certs>
+  include <abstractions/vulkan>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{bin}/ r,
+  /{usr/,}local/bin/ r,
+  @{bin}/* rPUx,
+
+  /usr/share/.mono/{,**} rw,
+
+  /etc/mono/{,**} r,
+  /etc/machine-id r,
+
+  owner @{user_config_dirs}/openra/{,**} rw,
+  owner @{user_config_dirs}/.mono/{,**} r,
+  owner @{run}/user/@{uid}/.mutter-Xwaylandauth.@{rand6} rw,
+
+  owner /tmp/*.* rw,
+  owner /tmp/CASESENSITIVETEST* rw,
+  owner /dev/shm/mono.* rw,
+
+  @{sys}/devices/@{pci}/uevent r,
+  @{sys}/devices/@{pci}/vendor r,
+  @{sys}/devices/@{pci}/device r,
+  @{sys}/devices/@{pci}/subsystem_vendor r,
+  @{sys}/devices/@{pci}/subsystem_device r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/mono-sgen>
+}

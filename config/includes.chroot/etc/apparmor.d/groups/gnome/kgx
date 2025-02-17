@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/kgx
+profile kgx @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/dconf-write>
+  include <abstractions/dri-common>
+  include <abstractions/dri-enumerate>
+  include <abstractions/gnome-strict>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/nvidia>
+  include <abstractions/vulkan>
+
+  capability sys_ptrace,
+
+  ptrace (read),
+
+  @{exec_path} mr,
+
+  # The shell is not confined on purpose.
+  @{bin}/@{shells}           rUx,
+
+  # Some CLI program can be launched directly from Gnome Shell
+  @{bin}/htop                 rPx,
+  @{bin}/micro               rPUx,
+  @{bin}/nvtop                rPx,
+
+  @{open_path}                rPx -> child-open,
+
+  owner /tmp/#@{int} rw,
+
+        @{PROC}/ r,
+        @{PROC}/@{pids}/cmdline r,
+        @{PROC}/@{pids}/stat r,
+        @{PROC}/1/cgroup r,
+  owner @{PROC}/@{pid}/cgroup r,
+
+  /dev/ptmx rw,
+
+  include if exists <local/kgx>
+}

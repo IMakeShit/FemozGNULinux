@@ -1,0 +1,42 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/sbctl
+profile sbctl @{exec_path} {
+  include <abstractions/base>
+
+  capability dac_read_search,
+  capability linux_immutable,
+
+  @{exec_path} mr,
+
+  @{bin}/lsblk  rPx,
+
+  /usr/share/secureboot/{,**} rw,
+
+  /{boot,efi}/{,**} r,
+  /{boot,efi}/EFI/{,**} rw,
+  /{boot,efi}/vmlinuz-linux* rw,
+  @{lib}/fwupd/efi/{,**} rw,
+
+  @{sys}/firmware/efi/efivars/db-@{uuid} rw,
+  @{sys}/firmware/efi/efivars/KEK-@{uuid} rw,
+  @{sys}/firmware/efi/efivars/PK-@{uuid} rw,
+  @{sys}/firmware/efi/efivars/SecureBoot-@{uuid} r,
+  @{sys}/firmware/efi/efivars/SetupMode-@{uuid} r,
+
+  @{sys}/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+
+  /dev/pts/@{int} rw,
+
+  # File Inherit
+  deny network inet stream,
+  deny network inet6 stream,
+
+  include if exists <local/sbctl>
+}

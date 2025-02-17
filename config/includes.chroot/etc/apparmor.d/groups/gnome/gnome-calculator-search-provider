@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/gnome-calculator-search-provider
+profile gnome-calculator-search-provider @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+
+  signal (send) set=kill peer=unconfined,
+
+  dbus bind bus=session name=org.gnome.Calculator.SearchProvider,
+  dbus receive bus=session path=/org/gnome/Calculator/SearchProvider
+       interface=org.gnome.Shell.SearchProvider2
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mrix,
+
+  @{bin}/* rPUx,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/cmdline r,
+
+  include if exists <local/gnome-calculator-search-provider>
+}

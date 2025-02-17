@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/netcap
+profile netcap @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  capability sys_ptrace,
+  capability dac_read_search,
+
+  ptrace (read),
+
+  @{exec_path} mr,
+
+  @{PROC}/ r,
+  @{PROC}/@{pid}/net/dev r,
+  @{PROC}/@{pid}/net/packet r,
+  @{PROC}/@{pid}/net/raw{,6} r,
+  @{PROC}/@{pid}/net/tcp{,6} r,
+  @{PROC}/@{pid}/net/udp{,6} r,
+  @{PROC}/@{pid}/net/udplite{,6} r,
+  @{PROC}/@{pids}/fd/ r,
+  @{PROC}/@{pids}/stat r,
+
+  include if exists <local/netcap>
+}

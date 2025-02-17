@@ -1,0 +1,52 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ModemManager
+profile ModemManager @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/consoles>
+  include <abstractions/devices-usb>
+  include <abstractions/dri-enumerate>
+
+  capability net_admin,
+
+  network qipcrtr dgram,
+  network netlink raw,
+
+  # dbus: own bus=system name=org.freedesktop.ModemManager1
+
+  @{exec_path} mr,
+
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/+platform:* r,
+  @{run}/udev/data/+usb:* r,
+  @{run}/udev/data/c16[6,7]:@{int} r,     # USB modems
+  @{run}/udev/data/c18[0,8,9]:@{int} r,   # USB devices & USB serial converters
+  @{run}/udev/data/c4:@{int} r,           # for /dev/tty[0-9]*
+  @{run}/udev/data/c5:@{int} r,           # for /dev/tty, /dev/console, /dev/ptmx
+  @{run}/udev/data/n@{int} r,
+
+  @{run}/systemd/inhibit/*.ref rw,
+
+  @{sys}/bus/ r,
+  @{sys}/bus/usb/devices/ r,
+  @{sys}/class/ r,
+  @{sys}/class/net/ r,
+  @{sys}/class/tty/ r,
+  @{sys}/class/wwan/ r,
+
+  @{sys}/devices/**/uevent r,
+  @{sys}/devices/@{pci}/revision r,
+  @{sys}/devices/virtual/net/*/ r,
+  @{sys}/devices/virtual/tty/*/ r,
+
+  include if exists <local/ModemManager>
+}

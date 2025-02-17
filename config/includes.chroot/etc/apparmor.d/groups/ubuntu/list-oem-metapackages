@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/update-notifier/list-oem-metapackages
+profile list-oem-metapackages @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/python>
+  include <abstractions/openssl>
+  include <abstractions/apt-common>
+
+  @{exec_path} mr,
+
+  @{bin}/dpkg         rPx -> child-dpkg,
+  @{bin}/ischroot     rix,
+
+  /etc/machine-id r,
+
+  @{sys}/devices/ r,
+  @{sys}/devices/**/ r,
+  @{sys}/devices/**/modalias r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+        @{PROC}/@{pids}/mountinfo r,
+
+  include if exists <local/list-oem-metapackages>
+}

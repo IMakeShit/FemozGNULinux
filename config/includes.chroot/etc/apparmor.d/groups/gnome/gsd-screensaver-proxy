@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/gsd-screensaver-proxy
+profile gsd-screensaver-proxy @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.gnome.SessionManager>
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=(term, hup) peer=gdm*,
+
+  # dbus: own bus=session name=org.freedesktop.ScreenSaver
+  # dbus: own bus=session name=org.gnome.SettingsDaemon.ScreensaverProxy
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/gsd-screensaver-proxy>
+}

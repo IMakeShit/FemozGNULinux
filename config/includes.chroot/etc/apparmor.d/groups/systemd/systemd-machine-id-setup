@@ -1,0 +1,39 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/systemd-machine-id-setup
+profile systemd-machine-id-setup @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability dac_override,
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+  capability sys_chroot,
+
+  ptrace (read),
+
+  mount flags=(rw rslave) -> /,
+  umount /etc/machine-id,
+
+  @{exec_path} mr,
+
+  / r,
+  /etc/machine-id rw,
+  /etc/ r,
+  /var/ r,
+
+        @{PROC}/1/environ r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/kernel/osrelease r,
+  owner @{PROC}/@{pid}/stat r,
+  owner @{PROC}/@{pid}/setgroups r,
+
+  include if exists <local/systemd-machine-id-setup>
+}

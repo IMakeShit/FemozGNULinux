@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/murmurd
+profile murmurd @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.Avahi>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  capability chown,
+  capability setgid,
+  capability setuid,
+  capability dac_override,
+  capability sys_resource,
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  unix (send, receive) type=stream addr=none peer=(label=lsb_release),
+
+  @{exec_path} mr,
+
+  @{bin}/lsb_release rPx -> lsb_release,
+
+  /etc/mumble-server.ini r,
+
+  owner /var/lib/mumble-server/{,**}    rw,
+  owner /var/lib/mumble-server/*.sqlite rwk,
+
+  /var/log/mumble-server/*.log rw,
+
+  owner @{run}/mumble-server/*.pid rw,
+
+  # Silencer
+  deny / r,
+
+  include if exists <local/murmurd>
+}

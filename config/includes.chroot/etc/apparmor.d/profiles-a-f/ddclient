@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ddclient
+profile ddclient @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/perl>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  @{exec_path} r,
+  @{bin}/perl r,
+
+  @{sh_path}        rix,
+  @{bin}/logger     rix,
+
+  /etc/ddclient.conf r,
+
+  @{run}/ddclient.pid rw,
+
+  /var/cache/ddclient/ddclient.cache rw,
+
+  / r,
+
+  include if exists <local/ddclient>
+}

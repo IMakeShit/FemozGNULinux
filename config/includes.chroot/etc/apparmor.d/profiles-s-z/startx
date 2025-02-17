@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/startx
+profile startx @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/{,e}grep   rix,
+  @{bin}/deallocvt  rix,
+  @{bin}/expr       rix,
+  @{bin}/hostname   rix,
+  @{bin}/mcookie    rix,
+  @{bin}/mktemp     rix,
+  @{bin}/rm         rix,
+  @{bin}/sed        rix,
+  @{bin}/tty        rix,
+  @{bin}/uname      rix,
+
+  @{bin}/xauth      rPx,
+  @{bin}/xinit      rPx,
+
+  /usr/share/terminfo/** r,
+
+  /etc/X11/xinit/xinitrc r,
+  /etc/X11/xinit/xserverrc r,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/.xinitrc r,
+  owner @{HOME}/.xserverrc r,
+
+        /tmp/ r,
+  owner /tmp/serverauth.* rw,
+
+        /dev/ r,
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/startx>
+}

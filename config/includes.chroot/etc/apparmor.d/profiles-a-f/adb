@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/adb
+@{exec_path} += @{lib}/android-sdk/platform-tools/adb
+profile adb @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/devices-usb>
+  include <abstractions/nameservice-strict>
+  include <abstractions/user-download-strict>
+
+  network inet stream,
+  network inet6 stream,
+
+  signal (receive) set=(kill) peer=scrcpy,
+
+  @{exec_path} mrix,
+
+  /usr/share/scrcpy/scrcpy-server r,
+
+  owner /tmp/adb.@{int}.log rw,
+
+  owner @{HOME}/.android/ rw,
+  owner @{HOME}/.android/adb.@{int} rw,
+  owner @{HOME}/.android/adbkey rw,
+
+  include if exists <local/adb>
+}

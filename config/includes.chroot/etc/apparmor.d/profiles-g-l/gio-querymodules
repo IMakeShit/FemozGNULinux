@@ -1,0 +1,26 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gio-querymodules
+profile gio-querymodules @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/openssl>
+
+  capability dac_read_search,
+  capability mknod,
+
+  @{exec_path} mr,
+
+  @{lib}/gtk-{3,4}.0/**/giomodule.cache{,.[0-9A-Z]*} w,
+  @{lib}/gio/modules/giomodule.cache{,.[0-9A-Z]*} w,
+
+  deny network inet stream,
+  deny network inet6 stream,
+
+  include if exists <local/gio-querymodules>
+}

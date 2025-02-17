@@ -1,0 +1,118 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# Common rules for applications sandboxed using bwrap.
+
+# This abstraction is wide on purpose. It is meant to be used by sandbox
+# applications (bwrap) that have no way to restrict access depending of the
+# application beeing confined.
+
+  include <abstractions/audio>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.Avahi>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/consoles>
+  include <abstractions/deny-sensitive-home>
+  include <abstractions/desktop>
+  include <abstractions/devices-usb>
+  include <abstractions/disks-read>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/p11-kit>
+  include <abstractions/ssl_certs>
+  include <abstractions/video>
+
+  dbus bus=accessibility,
+  dbus bus=session,
+  dbus bus=system,
+
+  /usr/** r,
+
+  /etc/** r,
+  /etc/igfx_user_feature*.txt rw,
+  /etc/shells rw,
+
+        / r,
+        /.* r,
+        /*/ r,
+  owner /@{uuid}/ w,
+  owner /_@{int}_/ w,
+
+  # Full access to user's data
+  / r,
+  /*/ r,
+  @{MOUNTDIRS}/ r,
+  @{MOUNTS}/ r,
+  @{MOUNTS}/** rwl,
+  owner @{HOME}/.var/app/** rmix,
+  owner @{HOME}/{,**} rwlk,
+  owner @{run}/user/@{uid}/{,**} rw,
+  owner @{user_config_dirs}/** rwkl,
+  owner @{user_share_dirs}/** rwkl,
+
+  @{user_games_dirs}/{,**} rm,
+
+  owner /tmp/** rmwk,
+  owner /dev/shm/** rwlk -> /dev/shm/**,
+
+  @{run}/cups/cups.sock rw, # Allow access to cups printing socket.
+  @{run}/havahi-daemon/socket rw, # Allow access to avahi-daemon socket.
+  @{run}/host/{,**} r,
+  @{run}/pcscd/pcscd.comm rw, # Allow access to pcscd socket.
+
+  @{sys}/ r,
+  @{sys}/block/ r,
+  @{sys}/bus/ r,
+  @{sys}/bus/*/devices/ r,
+  @{sys}/class/*/ r,
+  @{sys}/devices/** r,
+
+        @{sys}/fs/cgroup/user.slice/* r,
+        @{sys}/fs/cgroup/user.slice/user-@{uid}.slice/* r,
+        @{sys}/fs/cgroup/user.slice/user-@{uid}.slice/user@@{uid}.service/* r,
+  owner @{sys}/fs/cgroup/user.slice/user-@{uid}.slice/user@@{uid}.service/app.slice/* r,
+
+        @{PROC}/ r,
+        @{PROC}/@{pid}/cgroup r,
+        @{PROC}/@{pid}/cmdline r,
+        @{PROC}/@{pid}/comm r,
+        @{PROC}/@{pid}/mountinfo r,
+        @{PROC}/@{pid}/net/** r,
+        @{PROC}/@{pid}/smaps r,
+        @{PROC}/@{pid}/stat r,
+        @{PROC}/@{pid}/statm r,
+        @{PROC}/@{pid}/task/@{tid}/stat r,
+        @{PROC}/bus/pci/devices r,
+        @{PROC}/driver/** r,
+        @{PROC}/sys/fs/inotify/max_user_watches r,
+        @{PROC}/sys/kernel/core_pattern r,
+        @{PROC}/sys/kernel/osrelease r,
+        @{PROC}/sys/kernel/pid_max r,
+        @{PROC}/sys/kernel/yama/ptrace_scope r,
+        @{PROC}/uptime r,
+        @{PROC}/zoneinfo r,
+  owner @{PROC}/@{pid}/comm rw,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/fd/@{int} rw,
+  owner @{PROC}/@{pid}/io r,
+  owner @{PROC}/@{pid}/net/if_inet6 r,
+  owner @{PROC}/@{pid}/oom_score_adj rw,
+  owner @{PROC}/@{pid}/statm r,
+  owner @{PROC}/@{pid}/task/ r,
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+  owner @{PROC}/@{pid}/task/@{tid}/status r,
+
+  /dev/hidraw@{int} rw,
+  /dev/input/ r,
+  /dev/ptmx rw,
+  /dev/pts/ptmx rw,
+  /dev/tty rw,
+
+  include if exists <abstractions/bwrap-app.d>

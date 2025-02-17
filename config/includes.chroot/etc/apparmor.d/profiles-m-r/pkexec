@@ -1,0 +1,64 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pkexec
+profile pkexec @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/authentication>
+  include <abstractions/bus-system>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/wutmp>
+
+  capability audit_write,
+  capability dac_read_search,
+  capability net_admin,
+  capability setgid,  # gdbus
+  capability setuid,  # gmain
+  capability sys_ptrace,
+  capability sys_resource,
+  audit deny capability sys_nice,
+
+  network netlink raw,
+
+  signal (send) set=(term, kill) peer=polkit-agent-helper,
+
+  ptrace (read),
+
+  # dbus: talk bus=system name=org.freedesktop.PolicyKit1.Authority label=polkitd
+
+  @{exec_path} mr,
+
+  # Apps to be run via pkexec
+  @{bin}/*            rPUx,
+  @{lib}/cc-remote-login-helper rPx,
+  @{lib}/gvfs/gvfsd-admin rPUx, #(#FIXME#)
+  @{lib}/polkit-[0-9]/polkit-agent-helper-[0-9] rPx,
+  @{lib}/polkit-agent-helper-[0-9]              rPx,
+  @{lib}/update-notifier/package-system-locked  rPx,
+  /usr/share/apport/apport-gtk rPx,
+
+  @{etc_ro}/environment r,
+  @{etc_ro}/security/limits.d/{,*} r,
+  /etc/default/locale r,
+  /etc/shells r,
+
+        @{PROC}/@{pids}/stat r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/loginuid r,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+  owner @{HOME}/.xsession-errors w,
+
+  # Silencer
+deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/pkexec>
+}

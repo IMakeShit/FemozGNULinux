@@ -1,0 +1,42 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/gio
+@{exec_path} += @{bin}/gio-launch-desktop @{lib}/gio-launch-desktop
+@{exec_path} += @{lib}/@{multiarch}/glib-[0-9]*/gio-launch-desktop
+profile gio-launch-desktop @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/app-launcher-user>
+  include <abstractions/consoles>
+  include <abstractions/deny-sensitive-home>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+  include <abstractions/trash>
+
+  @{exec_path} mr,
+
+  @{bin}/gnome-terminal     rPUx,
+  @{lib}/gio-launch-desktop  rix,
+
+  owner @{HOME}/{,**} rw,
+
+  owner /tmp/wl-copy-buffer-@{rand6}/stdin r,
+
+  @{run}/mount/utab r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /dev/dri/card@{int} rw,
+
+  deny @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/gio-launch-desktop>
+}

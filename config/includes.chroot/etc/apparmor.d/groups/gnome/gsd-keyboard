@@ -1,0 +1,44 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/gsd-keyboard
+profile gsd-keyboard @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.locale1>
+  include <abstractions/bus/org.gnome.SessionManager>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=(term, hup) peer=gdm*,
+
+  # dbus: own bus=session name=org.gnome.SettingsDaemon.Keyboard
+
+  @{exec_path} mr,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/gdm/greeter-dconf-defaults r,
+
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+  /var/lib/gdm{3,}/.config/.gsd-keyboard.settings-ported* rw,
+
+  owner @{user_config_dirs}/.gsd-keyboard.settings-ported* rw,
+  owner @{user_share_dirs}/gnome-settings-daemon/{,input-sources*} rw,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/gsd-keyboard>
+}

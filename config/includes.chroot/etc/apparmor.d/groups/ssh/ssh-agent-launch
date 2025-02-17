@@ -1,0 +1,43 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/openssh/agent-launch
+profile ssh-agent-launch @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  @{bin}/{,z,ba,da}sh   rix,
+  @{bin}/dbus-update-activation-environment  rCx -> dbus,
+  @{bin}/getopt         rix,
+  @{bin}/grep           rix,
+  @{bin}/ssh-agent      rPx,
+
+  /etc/X11/Xsession.options r,
+
+  profile dbus {
+    include <abstractions/base>
+    include <abstractions/bus-session>
+
+    dbus send bus=session path=/org/freedesktop/DBus
+        interface=org.freedesktop.DBus
+        member=UpdateActivationEnvironment 
+        peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+    dbus send bus=session path=/org/freedesktop/systemd1
+        interface=org.freedesktop.systemd1.Manager
+        member=SetEnvironment 
+        peer=(name=org.freedesktop.systemd1),
+
+    @{bin}/dbus-update-activation-environment mr,
+
+    include if exists <local/ssh-agent-launch_dbus>
+  }
+
+  include if exists <local/ssh-agent-launch>
+}

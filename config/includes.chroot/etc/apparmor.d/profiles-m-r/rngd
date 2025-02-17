@@ -1,0 +1,40 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/rngd
+profile rngd @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/devices-usb>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  capability dac_read_search,
+  capability net_admin,
+  capability sys_admin,
+  capability sys_nice,
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  /etc/conf.d/rngd r,
+  /etc/machine-id r,
+  /etc/opensc.conf r,
+  /var/lib/dbus/machine-id r,
+
+  @{sys}/devices/virtual/misc/hw_random/rng_available r,
+
+  @{PROC}/sys/kernel/random/poolsize r,
+  @{PROC}/sys/kernel/random/write_wakeup_threshold rw,
+
+  /dev/hwrng r,
+  /dev/random w,
+
+  include if exists <local/rngd>
+}

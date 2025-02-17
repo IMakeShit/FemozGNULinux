@@ -1,0 +1,149 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pulseaudio
+profile pulseaudio @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.bluez>
+  include <abstractions/bus/org.freedesktop.Avahi>
+  include <abstractions/bus/org.freedesktop.hostname1>
+  include <abstractions/bus/org.freedesktop.RealtimeKit1>
+  include <abstractions/consoles>
+  include <abstractions/dconf-write>
+  include <abstractions/dri>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gstreamer>
+  include <abstractions/hosts_access>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/X-strict>
+
+  ptrace (trace) peer=@{profile_name},
+
+  signal (receive) peer=pacmd,
+
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  network bluetooth stream,
+  network bluetooth seqpacket,
+
+  # dbus: own bus=session name=org.freedesktop.ReserveDevice1.Audio@{int}
+  # dbus: own bus=session name=org.PulseAudio1
+  # dbus: own bus=session name=org.pulseaudio*
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  dbus receive bus=system path=/Client@{int}/ServiceResolver@{int}
+       interface=org.freedesktop.Avahi.ServiceResolver
+       member=Found
+       peer=(name=:*, label=avahi-daemon),
+
+  dbus receive bus=system path=/Client@{int}/ServiceBrowser@{int}
+       interface=org.freedesktop.Avahi.ServiceBrowser
+       member=ItemRemove
+       peer=(name=:*, label=avahi-daemon),
+
+  dbus send bus=system path=/
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=org.bluez),
+
+  dbus send bus=system path=/
+       interface=org.freedesktop.DBus.Peer
+       member=Ping
+       peer=(name=org.freedesktop.Avahi, label=avahi-daemon),
+
+  dbus send bus=system path=/Client@{int}/ServiceResolver@{int}
+       interface=org.freedesktop.Avahi.ServiceResolver
+       member={Found,Free}
+       peer=(name=org.freedesktop.Avahi, label=avahi-daemon),
+
+  # No label in rule
+  dbus send bus=system path=/org/freedesktop/RealtimeKit@{int}
+       interface=org.freedesktop.RealtimeKit@{int}
+       member=MakeThreadHighPriority
+       peer=(name=org.freedesktop.RealtimeKit@{int}),
+
+  @{exec_path} mrix,
+
+  @{lib}/pulse/gsettings-helper rix,
+  @{lib}/@{multiarch}/pulse/gconf-helper rix,
+  @{lib}/pulse-*/modules/*.so mr,
+
+  /usr/share/ladspa/rdf/{,*} r,
+  /usr/share/pulseaudio/{,**} r,
+
+  /var/lib/snapd/desktop/applications/ r,
+
+  # For GDM
+  owner /var/lib/gdm{[1-9],}/.config/pulse/{,**}  rw,
+  owner /var/lib/gdm{[1-9],}/.config/pulse/cookie   k,
+  owner /var/lib/gdm{[1-9],}/.config/dconf/user   r,
+
+  # For SDDM
+  owner /var/lib/sddm/.config/pulse/ rw,
+  owner /var/lib/sddm/.config/pulse/*-{device,stream}-volumes.tdb rw,
+  owner /var/lib/sddm/.config/pulse/*-default-{sink,source} rw,
+  owner /var/lib/sddm/.config/pulse/*-card-database.tdb rw,
+  owner /var/lib/sddm/.config/pulse/cookie rwk,
+
+  # For lightdm
+  owner /var/lib/lightdm/.config/ w,
+  owner /var/lib/lightdm/.config/pulse/{,**}  rw,
+  owner /var/lib/lightdm/.config/pulse/cookie   k,
+
+  /var/lib/gdm{3,}/.cache/gstreamer-1.0/ rw,
+  /var/lib/gdm{3,}/.cache/gstreamer-1.0/registry.*.bin{,.tmp@{rand6}} rw,
+
+  owner @{user_config_dirs}/ w,
+  owner @{user_config_dirs}/pulse/{,**} rw,
+
+  owner @{user_cache_dirs}/gstreamer-1.0/registry.*.bin r,
+
+  owner @{run}/user/@{uid}/ rw,
+  owner @{run}/user/@{uid}/pulse/{,*} rw,
+  owner @{run}/user/@{uid}/pulse/*.lock k,
+  owner @{run}/user/@{uid}/systemd/notify rw,
+
+  @{run}/systemd/users/@{uid} r,
+
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/c116:@{int} r,         # for ALSA
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+  @{sys}/devices/**/sound/**/{uevent,pcm_class} r,
+  @{sys}/devices/virtual/dmi/id/{bios_vendor,board_vendor,sys_vendor} r,
+  @{sys}/devices/virtual/video4linux/video@{int}/uevent r,
+
+  deny @{sys}/module/apparmor/parameters/enabled r,
+
+  owner @{PROC}/@{pids}/fd/ r,
+  owner @{PROC}/@{pids}/stat r,
+  owner @{PROC}/@{pids}/cmdline r,
+
+  /dev/media@{int} r,
+  /dev/video@{int} rw,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+  owner @{HOME}/.xsession-errors w,
+
+  include if exists <local/pulseaudio>
+}

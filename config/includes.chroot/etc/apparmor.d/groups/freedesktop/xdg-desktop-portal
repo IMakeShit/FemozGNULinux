@@ -1,0 +1,108 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/xdg-desktop-portal
+profile xdg-desktop-portal @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/app-open>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/net.hadess.PowerProfiles>
+  include <abstractions/bus/org.freedesktop.impl.portal.PermissionStore>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/bus/org.freedesktop.RealtimeKit1>
+  include <abstractions/dconf-write>
+  include <abstractions/freedesktop.org>
+  include <abstractions/nameservice-strict>
+
+  capability sys_ptrace,
+
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  ptrace (read),
+
+  # dbus: own bus=session name=org.freedesktop.portal.Desktop path=/org/freedesktop/portal/desktop interface={org.freedesktop.DBus.Properties,org.freedesktop{,.impl}.portal.{Settings,Background}}
+  dbus receive bus=session path=/org/freedesktop/portal/desktop
+       interface=org.freedesktop.portal.Realtime
+       member=MakeThread*
+       peer=(name=:*),
+
+  dbus receive bus=system path=/org/freedesktop/NetworkManager
+       interface=org.freedesktop.NetworkManager
+       member=CheckPermissions
+       peer=(name=:*, label=NetworkManager),
+
+  # dbus: own bus=session name=org.freedesktop.background.Monitor path=/org/freedesktop/background/monitor
+
+  dbus send bus=session path=/org/freedesktop/portal/documents
+       interface=org.freedesktop.DBus.Properties
+       peer=(name=:*, label=xdg-document-portal),
+  dbus send bus=session path=/org/freedesktop/portal/documents
+       interface=org.freedesktop.portal.Documents
+       peer=(name=:*, label=xdg-document-portal),
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/nautilus    rPx,
+  @{bin}/snap       rPUx,
+
+  @{bin}/kreadconfig5                                 rPx,
+  @{lib}/xdg-desktop-portal-validate-icon             rPUx,
+  @{open_path}                                        rPx -> child-open,
+
+  / r,
+  /.flatpak-info r,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/pipewire/client.conf r,
+  /usr/share/xdg-desktop-portal/** r,
+
+  /etc/pipewire/client.conf.d/ r,
+  /etc/sysconfig/proxy r,
+
+  /var/lib/gdm{,3}/greeter-dconf-defaults r,
+
+  /var/lib/flatpak/exports/share/mime/mime.cache r,
+  /var/lib/flatpak/exports/share/applications/{**,} r,
+
+  @{user_config_dirs}/kioslaverc r,
+
+  owner /tmp/icon* rw,
+
+  owner @{run}/user/@{uid}/.flatpak/{,*/*} r,
+  owner @{run}/user/@{uid}/pipewire-@{int} rw,
+
+        @{PROC}/ r,
+        @{PROC}/*/ r,
+        @{PROC}/1/cgroup r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/kernel/osrelease r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/task/ r,
+  owner @{PROC}/@{pid}/task/@{tid}/ r,
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+  owner @{PROC}/@{pid}/task/@{tid}/status r,
+  owner @{PROC}/@{pids}/cgroup r,
+
+  /dev/tty rw,
+
+  include if exists <local/xdg-desktop-portal>
+}

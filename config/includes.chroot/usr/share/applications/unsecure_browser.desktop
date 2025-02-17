@@ -1,0 +1,9 @@
+
+[Desktop Entry]
+Type=Application
+Name=Unsecure Browser
+Comment=LIke default but without Tor proxy
+Icon=librewolf
+Exec=librewolf --profile /home/user/.librewolf_unsecure
+Terminal=false
+Categories=System;Utility;

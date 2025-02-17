@@ -1,0 +1,37 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = /usr/share/command-not-found/command-not-found
+@{exec_path} += @{bin}/command-not-found
+@{exec_path} += @{lib}/command-not-found
+profile command-not-found @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/python>
+
+  @{exec_path} r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/lsb_release rPx -> lsb_release,
+  @{bin}/snap rPUx,
+
+  @{lib}/python3/dist-packages/CommandNotFound/**/__pycache__/*.cpython-@{int}.pyc.@{int} w,
+
+  /usr/share/command-not-found/{,**} r,
+
+  /var/lib/command-not-found/commands.db rwk,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /dev/tty@{int} rw,
+
+  include if exists <local/command-not-found>
+}

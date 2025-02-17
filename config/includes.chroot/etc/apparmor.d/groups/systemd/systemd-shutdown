@@ -1,0 +1,35 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-shutdown
+profile systemd-shutdown @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/systemd-common>
+
+  capability kill,
+  capability sys_boot,
+  capability sys_ptrace,
+  capability sys_resource,
+
+  signal (send)    set=(stop, cont, term, kill),
+  signal (receive) set=(rtmin+23) peer=plymouthd,
+
+  @{exec_path} mr,
+
+        @{PROC}/ r,
+        @{PROC}/@{pid}/fd/ r,
+        @{PROC}/@{pids}/cmdline r,
+  owner @{PROC}/@{pid}/comm r,
+  owner @{PROC}/sys/kernel/core_pattern w,
+  owner @{PROC}/sys/kernel/printk rw,
+
+  /dev/watchdog@{int} w,
+
+  include if exists <local/systemd-shutdown>
+}

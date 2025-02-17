@@ -1,0 +1,51 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,at-spi2{,-core}/}at-spi2-registryd
+profile at-spi2-registryd @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.gnome.SessionManager>
+  include <abstractions/nameservice-strict>
+  include <abstractions/X-strict>
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+  signal (receive) set=(term hup kill) peer=@{systemd},
+  signal (receive) set=(term hup kill) peer=dbus-daemon,
+  signal (receive) set=(term hup kill) peer=gdm*,
+
+  # dbus: own bus=accessibility name=org.a11y.atspi.{R,r}egistry
+
+  dbus send bus=accessibility path=/org/a11y/atspi/accessible/root
+       interface=org.freedesktop.DBus.Properties
+       member=Set
+       peer=(name=:*),
+  dbus receive bus=accessibility path=/org/a11y/atspi/accessible/root
+       interface=org.a11y.atspi.Socket
+       member=Embed
+       peer=(name=:*),
+
+  dbus receive bus=accessibility path=/org/a11y/atspi/registry/deviceeventcontroller
+       interface=org.a11y.atspi.DeviceEventController
+       member={GetKeystrokeListeners,GetDeviceEventListeners}
+       peer=(name=:*),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/at-spi2-registryd>
+}

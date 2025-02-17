@@ -1,0 +1,70 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2015-2020 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/qbittorrent-nox
+profile qbittorrent-nox @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink dgram,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  # Qbittorrent home dirs
+  owner @{user_config_dirs}/qBittorrent/ rw,
+  owner @{user_config_dirs}/qBittorrent/** rwkl -> @{user_config_dirs}/qBittorrent/#@{int},
+  owner @{user_share_dirs}/qBittorrent/ rw,
+  owner @{user_share_dirs}/qBittorrent/** rwl -> @{user_share_dirs}/data/qBittorrent/**/#@{int},
+  # Old dir, not recommended to use:
+  deny owner @{user_share_dirs}/data/qBittorrent/ rw,
+
+  # Cache dir
+  owner @{user_cache_dirs}/ rw,
+  owner @{user_cache_dirs}/#@{int} rw,
+  owner @{user_cache_dirs}/qBittorrent/{,**} rw,
+
+  # Torrent files
+  owner @{user_torrents_dirs}/ r,
+  owner @{user_torrents_dirs}/** rw,
+
+  /dev/disk/by-label/ r,
+
+  /dev/shm/#@{int} rw,
+
+       owner @{PROC}/@{pid}/mountinfo r,
+       owner @{PROC}/@{pid}/mounts r,
+  deny       @{PROC}/sys/kernel/random/boot_id r,
+
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /usr/share/mime/mime.cache r,
+  /usr/share/mime/types r,
+  owner @{user_share_dirs}/mime/mime.cache r,
+  owner @{user_share_dirs}/mime/types r,
+
+  # TMP
+  owner /tmp/qtsingleapp-qBitto-* rw,
+  owner /tmp/qtsingleapp-qBitto-*-lockfile rwk,
+  owner /tmp/.qBittorrent/ rw,
+  owner /tmp/.qBittorrent/* rwl -> /tmp/.qBittorrent/*,
+  owner /tmp/mozilla_*/*.torrent rw,
+  owner /tmp/*.torrent rw,
+  owner /tmp/.*/{,s} rw,
+
+  include if exists <local/qbittorrent-nox>
+}

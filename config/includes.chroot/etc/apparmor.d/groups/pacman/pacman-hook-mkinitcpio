@@ -1,0 +1,73 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/libalpm/scripts/mkinitcpio
+profile pacman-hook-mkinitcpio @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability dac_read_search,
+  capability mknod,
+
+  @{exec_path} mr,
+
+  @{bin}/bash       rix,
+  @{bin}/cmp        rix,
+  @{bin}/compgen    rix,
+  @{bin}/env        rix,
+  @{bin}/install    rix,
+  @{bin}/mkinitcpio rPx,
+  @{bin}/mv         rix,
+  @{bin}/od         rix,
+  @{bin}/rm         rix,
+  @{bin}/sed        rix,
+  @{bin}/sort       rix,
+  @{bin}/stat       rix,
+  @{bin}/pacman     rCx -> pacman,
+
+  /usr/share/mkinitcpio/*.preset r,
+
+  /etc/mkinitcpio.d/{,**} r,
+  /etc/mkinitcpio.d/*.preset{,.pacsave} rw,
+
+  / r,
+  /boot/ r,
+  /boot/vmlinuz-* rw,
+  /boot/initramfs-*.img rw,
+  /boot/initramfs-*-fallback.img rw,
+
+  /dev/tty rw,
+  owner /dev/pts/@{int} rw,
+
+  # # Inherit Silencer
+  deny network inet6 stream,
+  deny network inet stream,
+
+  profile pacman {
+    include <abstractions/base>
+    include <abstractions/openssl>
+
+    capability dac_read_search,
+
+    @{bin}/pacman mr,
+  
+    @{bin}/gpg rix,
+    @{bin}/gpgconf rix,
+    @{bin}/gpgsm rix,
+  
+    /etc/pacman.conf r,
+    /etc/pacman.d/{,**} r,
+    /etc/pacman.d/gnupg/** rwkl,
+
+    /var/lib/pacman/{,**} r,
+
+    include if exists <local/pacman-hook-mkinitcpio_pacman>
+  }
+
+  include if exists <local/pacman-hook-mkinitcpio>
+}

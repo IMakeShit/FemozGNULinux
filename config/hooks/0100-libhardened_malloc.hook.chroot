@@ -1,0 +1,10 @@
+#!/bin/bash
+# Компилируем и устаналиваем libhardened_malloc от GrapheneOS
+apt install gcc make git g++ -y
+git clone https://github.com/GrapheneOS/hardened_malloc
+cd hardened_malloc
+make 
+mv out/libhardened_malloc.so /usr/lib
+apt purge gcc make git g++ -y
+cd ..
+rm -rf hardened_malloc

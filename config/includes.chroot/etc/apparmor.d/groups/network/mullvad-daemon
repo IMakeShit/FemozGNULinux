@@ -1,0 +1,70 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/mullvad-daemon
+@{exec_path} += /opt/Mullvad*/resources/mullvad-daemon
+profile mullvad-daemon @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability dac_override,
+  
+  capability net_admin,
+  capability fowner,
+  capability fsetid,
+  capability net_raw,
+  capability sys_admin,
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network inet raw,
+  network inet6 raw,
+  network netlink raw,
+  network netlink dgram,
+
+  mount fstype=cgroup -> /sys/fs/cgroup/net_cls/,
+
+  @{exec_path} mr,
+
+  @{bin}/ip  rix,
+
+  "/opt/Mullvad VPN/resources/openvpn" rix,
+  "/opt/Mullvad VPN/resources/*.so*" mr,
+  "/opt/Mullvad VPN/resources/*" r,
+
+  /etc/mullvad-vpn/{,*} r,
+  /etc/mullvad-vpn/@{uid} rw,
+  /etc/mullvad-vpn/*.json rw,
+  @{etc_rw}/resolv.conf rw,
+  @{etc_rw}/resolv.conf.mullvadbackup rw,
+
+  /var/cache/mullvad-vpn/{,*} rw,
+  /var/log/mullvad-vpn/{,*} rw,
+  owner /var/log/private/mullvad-vpn/*.log rw,
+  
+  @{run}/mullvad-vpn rw,
+  @{run}/NetworkManager/resolv.conf r,
+
+  @{sys}/fs/cgroup/net_cls/ w,
+  @{sys}/fs/cgroup/net_cls/mullvad-exclusions/ w,
+  @{sys}/fs/cgroup/net_cls/mullvad-exclusions/net_cls.classid rw,
+  @{sys}/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+
+  owner /tmp/@{uuid} rw,
+  owner /tmp/talpid-openvpn-@{uuid} rw,
+
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/sys/net/ipv6/conf/all/disable_ipv6 r,
+        @{PROC}/sys/net/ipv{4,6}/conf/all/src_valid_mark rw,
+
+  /dev/net/tun rw,
+
+  include if exists <local/mullvad-daemon>
+}

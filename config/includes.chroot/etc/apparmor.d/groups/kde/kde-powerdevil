@@ -1,0 +1,75 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/org_kde_powerdevil
+profile kde-powerdevil @{exec_path} flags=(attach_disconnected mediate_deleted) {
+  include <abstractions/base>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/graphics>
+  include <abstractions/kde-strict>
+
+  capability wake_alarm,
+
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+
+  @{exec_path} mrix,
+
+  @{sh_path}          rix,
+  @{bin}/find         rix,
+  @{bin}/grep         rix,
+  @{bin}/kcminit      rPx,
+  @{bin}/sed          rix,
+  @{bin}/xargs        rix,
+  @{lib}/drkonqi      rPx,
+
+  /usr/share/knotifications5/*.notifyrc r,
+
+  /etc/fstab r,
+  /etc/machine-id r,
+
+  owner @{HOME}/ r,
+
+  owner @{user_cache_dirs}/kcrash-metadata/{,*} rw,
+
+  owner @{user_config_dirs}/#@{int} rw,
+  owner @{user_config_dirs}/powerdevilrc.lock rwk,
+  owner @{user_config_dirs}/powerdevilrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/powermanagementprofilesrc.lock rwk,
+  owner @{user_config_dirs}/powermanagementprofilesrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+
+        @{run}/systemd/inhibit/*.ref rw,
+        @{run}/udev/data/c189:@{int} r,       # for /dev/bus/usb/**
+  owner @{run}/user/@{uid}kcrash_@{int} rw,
+
+  @{sys}/bus/ r,
+  @{sys}/bus/i2c/devices/ r,
+  @{sys}/class/ r,
+  @{sys}/class/drm/ r,
+  @{sys}/class/i2c-dev/ r,
+  @{sys}/class/usbmisc/ r,
+  @{sys}/devices/ r,
+  @{sys}/devices/@{pci}/drm/card@{int}/*/edid r,
+  @{sys}/devices/@{pci}/drm/card@{int}/*/enabled r,
+  @{sys}/devices/@{pci}/drm/card@{int}/*/status r,
+  @{sys}/devices/@{pci}/i2c-@{int}/name r,
+  @{sys}/devices/**/ r,
+  @{sys}/devices/i2c-@{int}/name r,
+  @{sys}/devices/platform/*/i2c-@{int}/name r,
+
+  @{PROC}/@{pid}/fd/ r,
+  @{PROC}/@{pid}/mounts r,
+  @{PROC}/sys/kernel/core_pattern r,
+  @{PROC}/sys/kernel/random/boot_id r,
+
+  /dev/tty rw,
+  /dev/rfkill r,
+
+  include if exists <local/kde-powerdevil>
+}

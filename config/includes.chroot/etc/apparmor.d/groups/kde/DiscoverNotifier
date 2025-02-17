@@ -1,0 +1,38 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/DiscoverNotifier
+profile DiscoverNotifier @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/graphics>
+  include <abstractions/kde-strict>
+  include <abstractions/nameservice-strict>
+
+  network inet dgram,
+  network inet6 dgram,
+  network netlink dgram,
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+
+  @{exec_path} mr,
+
+  /etc/flatpak/remotes.d/ r,
+
+  /var/lib/flatpak/repo/{,**} r,
+
+  owner @{user_cache_dirs}/flatpak/{,**} rw,
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+
+  owner @{user_share_dirs}/flatpak/{,**} rw,
+
+  @{PROC}/sys/kernel/core_pattern r,
+
+  /dev/tty r,
+
+  include if exists <local/DiscoverNotifier>
+}

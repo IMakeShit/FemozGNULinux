@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xdg-email
+profile xdg-email @{exec_path} flags=(complain) {
+  include <abstractions/base>
+
+  @{exec_path}  r,
+
+  @{sh_path}         rix,
+  @{bin}/{,e}grep     rix,
+  @{bin}/{m,g,}awk    rix,
+  @{bin}/basename     rix,
+  @{bin}/cut          rix,
+  @{bin}/echo         rix,
+  @{bin}/gio          rPx,
+  @{bin}/kreadconfig5 rPx,
+  @{bin}/readlink     rix,
+  @{bin}/sed          rix,
+  @{bin}/tail         rix,
+  @{bin}/which{,.debianutils} rix,
+  @{bin}/xdg-mime     rPx,
+  @{thunderbird_path} rPx,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/xdg-email>
+}

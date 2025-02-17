@@ -1,0 +1,38 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gnome-contacts
+profile gnome-contacts @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network netlink raw,
+
+  # dbus: own bus=session name=org.gnome.Contacts
+
+  # dbus: talk bus=session name=org.gnome.evolution.dataserver.AddressBookFactory label=evolution-addressbook-factory
+  # dbus: talk bus=session name=org.gnome.evolution.dataserver.Source label=evolution-source-registry
+
+  @{exec_path} mr,
+
+  owner @{user_cache_dirs}/evolution/addressbook/{,**} r,
+  owner @{user_config_dirs}/gnome-contacts/{,**} rw,
+  owner @{user_share_dirs}/folks/relationships.ini r,
+
+  include if exists <local/gnome-contacts>
+}

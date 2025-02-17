@@ -1,0 +1,391 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gnome-shell
+profile gnome-shell @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/app-launcher-user>
+  include <abstractions/audio>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/net.hadess.PowerProfiles>
+  include <abstractions/bus/net.hadess.SwitcherooControl>
+  include <abstractions/bus/net.reactivated.Fprint>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.Accounts>
+  include <abstractions/bus/org.freedesktop.background.Monitor>
+  include <abstractions/bus/org.freedesktop.ColorManager>
+  include <abstractions/bus/org.freedesktop.FileManager1>
+  include <abstractions/bus/org.freedesktop.GeoClue2>
+  include <abstractions/bus/org.freedesktop.impl.portal.PermissionStore>
+  include <abstractions/bus/org.freedesktop.locale1>
+  include <abstractions/bus/org.freedesktop.login1.Session>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/bus/org.freedesktop.Notifications>
+  include <abstractions/bus/org.freedesktop.PackageKit>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/bus/org.freedesktop.RealtimeKit1>
+  include <abstractions/bus/org.freedesktop.secrets>
+  include <abstractions/bus/org.freedesktop.systemd1>
+  include <abstractions/bus/org.freedesktop.UPower>
+  include <abstractions/bus/org.gtk.Private.RemoteVolumeMonitor>
+  include <abstractions/bus/org.gtk.vfs.Daemon>
+  include <abstractions/bus/org.gtk.vfs.Metadata>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+  include <abstractions/p11-kit>
+  include <abstractions/ssl_certs>
+  include <abstractions/thumbnails-cache-read>
+  include <abstractions/video>
+
+  capability sys_nice,
+  capability sys_ptrace,
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+  network unix stream,
+
+  ptrace (read),
+  ptrace (readby) peer=pipewire,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=(term, hup) peer=gdm*,
+  signal (send),
+
+  unix (send,receive) type=stream addr=none peer=(label=gnome-extension-ding),
+  unix (send,receive) type=stream addr=none peer=(label=xkbcomp),
+  unix (send,receive) type=stream addr=none peer=(label=xwayland),
+  unix (send,receive, connect) type=stream peer=(addr="@/var/lib/gdm{3,}/.cache/ibus/dbus-????????", label=ibus-daemon),
+
+  # Owned by gnome-shell
+
+  dbus bind bus=session name=org.gnome.*,
+  dbus (send, receive) bus=session path=/org/gnome/**
+       interface={org.gnome.*,org.freedesktop.{Application,DBus.Properties,DBus.ObjectManager},org.gtk.{Actions,Application}}
+       peer=(name="{:*,org.gnome.*,org.freedesktop.DBus}"),
+
+  # dbus: own bus=session name=com.canonical.Unity path=/com/canonical/{U,u}nity
+  # dbus: own bus=session name=com.rastersoft.dingextension
+  # dbus: own bus=session name=org.gtk.MountOperationHandler
+  # dbus: own bus=session name=org.gtk.Notifications
+  # dbus: own bus=session name=org.kde.StatusNotifierWatcher path=/StatusNotifierWatcher
+
+  # TODO: org.gtk.Actions for com.rastersoft.dingextension
+
+  # Talk with gnome-shell
+
+  # dbus: talk bus=session name=com.rastersoft.ding label=gnome-extension-ding
+
+  ## System bus
+
+  dbus (send, receive) bus=system path=/org/gnome/**
+       interface=org.gnome.*
+       peer=(name="{:*,org.gnome.*}"),
+  dbus (send, receive) bus=system path=/org/gnome/**
+       interface=org.freedesktop.DBus.Properties
+       peer=(name="{:*,org.gnome.*}"),
+
+  dbus send bus=system path=/org/freedesktop/PolicyKit1/Authority
+       interface=org.freedesktop.PolicyKit1.Authority
+       member=RegisterAuthenticationAgent
+       peer=(name=:*, label=polkitd),
+  dbus receive bus=system path=/org/freedesktop/PolicyKit1/AuthenticationAgent
+       interface=org.freedesktop.PolicyKit1.AuthenticationAgent
+       member=BeginAuthentication
+       peer=(name=:*, label=polkitd),
+
+  dbus send bus=system path=/org/freedesktop/NetworkManager/AgentManager
+       interface=org.freedesktop.NetworkManager.AgentManager
+       member={RegisterWithCapabilities,Unregister}
+       peer=(name=:*, label=NetworkManager),
+
+  dbus send bus=system path=/org/freedesktop/ColorManager
+       interface=org.freedesktop.ColorManager
+       member=DeleteDevice
+       peer=(name=:*, label=colord),
+  dbus receive bus=system path=/org/freedesktop/ColorManager
+       interface=org.freedesktop.ColorManager
+       member=ProfileAdded
+       peer=(name=:*, label=colord),
+
+  dbus receive bus=system path=/org/freedesktop/login1/seat/seat@{int}
+       interface=org.freedesktop.DBus.Properties
+       member=PropertiesChanged
+       peer=(name=:*, label=systemd-logind),
+  dbus send bus=system path=/org/freedesktop/login1/seat/seat@{int}
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=systemd-logind),
+  dbus send bus=system path=/org/freedesktop/login1
+       interface=org.freedesktop.login1.Manager
+       member=Can*
+       peer=(name=:*, label=systemd-logind),
+  dbus send bus=system path=/org/freedesktop/login1/user/*
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=systemd-logind),
+
+  dbus send bus=system path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID,GetNameOwner,ListNames}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  ## Session bus
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID,GetNameOwner,ListNames}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+  dbus send bus=session path=/
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixProcessID,GetNameOwner,ListNames}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus send bus=accessibility path=/org/a11y/atspi/accessible/root
+       interface=org.a11y.atspi.Socket
+       member=Embed
+       peer=(name=org.a11y.atspi.Registry),
+
+  dbus send bus=session path=/org/gtk/vfs/**
+       interface=org.gtk.vfs.*
+       peer=(name=:*, label=gvfsd*),
+
+  dbus send bus=session path=/org/ayatana/NotificationItem/*
+       interface=org.freedesktop.DBus.Properties
+       member={Get,GetAll}
+       peer=(name=:*, label=update-notifier),
+
+  dbus receive bus=session path=/org/freedesktop/systemd1
+       interface=org.freedesktop.systemd1.Manager
+       member=JobRemoved
+       peer=(name=:*, label="@{systemd_user}"),
+
+  dbus send bus=session path=/MenuBar
+       interface=com.canonical.dbusmenu
+       member={AboutToShow,GetLayout,GetGroupProperties}
+       peer=(name=:*),
+
+  dbus send bus=session path=/StatusNotifierItem
+       interface=org.freedesktop.DBus.Properties
+       member={Get,GetAll}
+       peer=(name=:*),
+
+  dbus send bus=session path=/org/mpris/MediaPlayer2
+       interface=org.freedesktop.DBus.Properties
+       member={Get,GetAll}
+       peer=(name=:*),
+
+  dbus send bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*),
+  dbus send bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  @{exec_path} mr,
+
+  @{bin}/Xwayland         rPx,
+  @{lib}/polkit-1/polkit* rPx,
+  @{lib}/*                rPUx,
+  @{lib}/@{multiarch}/glib-[0-9]*/gio-launch-desktop rix,
+
+  /usr/share/gnome-shell/extensions/ding@rastersoft.com/{,*/}ding.js rPx,
+
+  /opt/**/share/icons/{,**} r,
+  /opt/*/**/*.png r,
+  /snap/*/@{uid}/**.png r,
+  /usr/share/{,zoneinfo-}icu/{,**} r,
+  /usr/share/**.{png,jpg,svg} r,
+  /usr/share/**/icons/{,**} r,
+  /usr/share/backgrounds/{,**} r,
+  /usr/share/byobu/desktop/byobu* r,
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/desktop-base/** r,
+  /usr/share/desktop-directories/{,*.directory} r,
+  /usr/share/egl/{,**} r,
+  /usr/share/gdm/BuiltInSessions/{,*.desktop} r,
+  /usr/share/gdm/greeter-dconf-defaults r,
+  /usr/share/gdm/greeter/applications/{,**} r,
+  /usr/share/gnome-shell/{,**} r,
+  /usr/share/libgweather/Locations.xml r,
+  /usr/share/libinput*/ r,
+  /usr/share/libinput*/{,**/}[0-9][0-9]-*.quirks r,
+  /usr/share/libinput*/libinput/ r,
+  /usr/share/libwacom/{,*.stylus,*.tablet} r,
+  /usr/share/pipewire/client.conf r,
+  /usr/share/wallpapers/** r,
+  /usr/share/wayland-sessions/{,*.desktop} r,
+  /usr/share/xml/iso-codes/{,**} r,
+
+  /.flatpak-info r,
+  /etc/fstab r,
+  /etc/pipewire/client.conf.d/{,**} r,
+  /etc/timezone r,
+  /etc/udev/hwdb.bin r,
+  /etc/xdg/menus/gnome-applications.menu r,
+
+  /var/lib/gdm{3,}/.cache/ w,
+  /var/lib/gdm{3,}/.cache/event-sound-cache.tdb.@{md5}.x86_64-pc-linux-gnu rwk,
+  /var/lib/gdm{3,}/.cache/fontconfig/{,*} rwl,
+  /var/lib/gdm{3,}/.cache/gstreamer-@{int}/ rw,
+  /var/lib/gdm{3,}/.cache/gstreamer-@{int}/registry.*.bin{,.tmp@{rand6}} rw,
+  /var/lib/gdm{3,}/.cache/libgweather/ r,
+  /var/lib/gdm{3,}/.cache/mesa_shader_cache/ rw,
+  /var/lib/gdm{3,}/.cache/mesa_shader_cache/@{h}@{h}/ rw,
+  /var/lib/gdm{3,}/.cache/mesa_shader_cache/@{h}@{h}/@{hex} rw,
+  /var/lib/gdm{3,}/.cache/mesa_shader_cache/@{h}@{h}/@{hex}.tmp rwk,
+  /var/lib/gdm{3,}/.cache/mesa_shader_cache/index rw,
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm{3,}/.config/ibus/ rw,
+  /var/lib/gdm{3,}/.config/ibus/bus/ rw,
+  /var/lib/gdm{3,}/.config/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+  /var/lib/gdm{3,}/.config/pulse/ rw,
+  /var/lib/gdm{3,}/.config/pulse/client.conf r,
+  /var/lib/gdm{3,}/.config/pulse/cookie rwk,
+  /var/lib/gdm{3,}/.local/share/applications/{,**} r,
+  /var/lib/gdm{3,}/.local/share/gnome-shell/{,**} rw,
+  /var/lib/gdm{3,}/.local/share/icc/{,*} rw,
+
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+
+  /var/lib/AccountsService/icons/* r,
+
+  /var/lib/flatpak/app/**/gnome-shell/{,**} r,
+  /var/lib/flatpak/appstream/**/icons/** r,
+  /var/lib/flatpak/exports/share/gnome-shell/{,**} r,
+
+  owner @{HOME}/.face r,
+  owner @{HOME}/.mozilla/firefox/firefox-mpris/{,*} r,
+  owner @{HOME}/.var/app/**/ r,
+  owner @{HOME}/.var/app/**.{png,jpg,svg} r,
+  owner @{HOME}/@{XDG_SCREENSHOTS_DIR}/{,**} rw,
+  owner @{HOME}/@{XDG_WALLPAPERS_DIR}/{,**} r,
+
+  owner @{user_games_dirs}/**.{png,jpg,svg} r,
+  owner @{user_music_dirs}/**.{png,jpg,svg} r,
+
+  owner @{user_config_dirs}/.goutputstream{,-@{rand6}} rw,
+  owner @{user_config_dirs}/background r,
+  owner @{user_config_dirs}/ibus/ w,
+  owner @{user_config_dirs}/monitors.xml{,~} rwl,
+  owner @{user_config_dirs}/pulse/ rw,
+  owner @{user_config_dirs}/tiling-assistant/{,**} rw,
+
+  owner @{user_share_dirs}/backgrounds/{,**} rw,
+  owner @{user_share_dirs}/desktop-directories/{,**} r,
+  owner @{user_share_dirs}/gnome-shell/{,**} rw,
+  owner @{user_share_dirs}/gnome-shell/extensions/{,**} r,
+  owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+  owner @{user_share_dirs}/icc/{,*} rw,
+  owner @{user_share_dirs}/sounds/__custom/index.theme r,
+
+  owner @{user_cache_dirs}/evolution/addressbook/*/PHOTO-*.JPEG r,
+  owner @{user_cache_dirs}/gnome-boxes/*.png r,
+  owner @{user_cache_dirs}/gnome-photos/{,**} r,
+  owner @{user_cache_dirs}/gnome-screenshot/{,**} rw,
+  owner @{user_cache_dirs}/libgweather/{,**} rw,
+  owner @{user_cache_dirs}/media-art/{,**} r,
+  owner @{user_cache_dirs}/vlc/**/*.jpg r,
+
+  owner @{run}/user/@{uid}/gnome-shell-disable-extensions rw,
+  owner @{run}/user/@{uid}/gnome-shell/{,**} rw,
+  owner @{run}/user/@{uid}/gvfsd/socket-@{rand8} rw,
+  owner @{run}/user/@{uid}/snap.snap*/wayland-cursor-shared-* rw,
+  owner @{run}/user/@{uid}/systemd/notify rw,
+  owner @{run}/user/@{uid}/pipewire-@{int} rw,
+
+  owner /dev/shm/.org.chromium.Chromium.* rw,
+  owner /dev/shm/wayland.mozilla.ipc.@{int} rw,
+
+        /tmp/.X@{int}-lock rw,
+        /tmp/dbus-@{rand8} rw,
+  owner /tmp/[0-9A-Z]*.shell-extension.zip rw,
+  owner /tmp/gdkpixbuf-xpm-tmp.@{rand6} rw,
+
+  @{run}/systemd/users/@{uid} r,
+  @{run}/systemd/seats/seat@{int} r,
+  @{run}/systemd/sessions/  r,
+  @{run}/systemd/sessions/* r,
+  @{run}/systemd/inhibit/[0-9]*.ref rw,
+
+  @{run}/udev/tags/seat/ r,
+
+  @{run}/udev/data/+input:input@{int} r,  # for mouse, keyboard, touchpad
+  @{run}/udev/data/+platform:* r,
+  @{run}/udev/data/+dmi:id r,
+  @{run}/udev/data/+acpi* r,
+  @{run}/udev/data/+pci:* r,              # for VGA compatible controller
+  @{run}/udev/data/+sound:card@{int} r,   # for sound
+  @{run}/udev/data/+usb* r,               # for USB mouse and keyboard
+  @{run}/udev/data/+i2c:* r,
+  @{run}/udev/data/+hid:* r,              # for HID-Compliant Keyboard
+  @{run}/udev/data/c10:@{int} r,          # for non-serial mice, misc features
+  @{run}/udev/data/c13:@{int} r,          # for /dev/input/*
+  @{run}/udev/data/c189:@{int}  r,        # for /dev/bus/usb/**
+  @{run}/udev/data/c226:@{int} r,         # for /dev/dri/card* 
+  @{run}/udev/data/n@{int} r,
+
+  @{sys}/**/uevent r,
+  @{sys}/bus/ r,
+  @{sys}/class/hwmon/ r,
+  @{sys}/class/input/ r,
+  @{sys}/class/net/ r,
+  @{sys}/class/power_supply/ r,
+  @{sys}/devices/**/hwmon@{int}/{,name,temp*,fan*} r,
+  @{sys}/devices/**/hwmon@{int}/**/{,name,temp*,fan*} r,
+  @{sys}/devices/**/hwmon/{,name,temp*,fan*} r,
+  @{sys}/devices/**/hwmon/**/{,name,temp*,fan*} r,
+  @{sys}/devices/**/power_supply/{,**} r,
+  @{sys}/devices/@{pci}/boot_vga r,
+  @{sys}/devices/@{pci}/input@{int}/{properties,name} r,
+  @{sys}/devices/@{pci}/net/*/statistics/{rx_bytes,tx_bytes} r,
+  @{sys}/devices/platform/**/input@{int}/{properties,name} r,
+  @{sys}/devices/virtual/net/*/statistics/{rx_bytes,tx_bytes} r,
+
+        @{PROC}/ r,
+        @{PROC}/@{pid}/attr/current r,
+        @{PROC}/@{pid}/cgroup r,
+        @{PROC}/@{pid}/net/* r,
+        @{PROC}/@{pid}/stat r,
+        @{PROC}/@{pid}/task/@{tid}/stat r,
+        @{PROC}/@{pids}/cmdline r,
+        @{PROC}/1/cgroup r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/kernel/osrelease r,
+        @{PROC}/sys/net/ipv{4,6}/conf/all/disable_ipv{4,6} r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/fdinfo/@{int} r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/task/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+  /dev/input/event@{int} rw,
+  /dev/media@{int} rw,
+  /dev/tty@{int} rw,
+
+  include if exists <local/gnome-shell>
+}

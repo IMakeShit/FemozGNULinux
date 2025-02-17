@@ -1,0 +1,37 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/speedtest{,-cli}
+profile speedtest @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/ r,
+  @{bin}/file  rix,
+  @{bin}/uname rix,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /usr/local/lib/python*/dist-packages/ r,
+
+  /etc/magic r,
+
+  include if exists <local/speedtest>
+}

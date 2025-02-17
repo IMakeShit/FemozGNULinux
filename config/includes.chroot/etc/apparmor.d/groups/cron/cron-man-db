@@ -1,0 +1,38 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/cron.{hourly,daily,weekly,monthly}/man-db
+profile cron-man-db @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  # For start-stop-daemon
+  capability setgid,
+  capability setuid,
+
+  @{exec_path} r,
+  @{sh_path}                rix,
+
+  @{bin}/{,e}grep           rix,
+  @{bin}/start-stop-daemon rix,
+  @{bin}/xargs              rix,
+  @{bin}/find               rix,
+
+  @{bin}/mandb              rPx,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /var/cache/man/ r,
+  /var/cache/man/** r,
+
+  # For shell pwd
+  / r,
+
+  include if exists <local/cron-man-db>
+}

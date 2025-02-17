@@ -1,0 +1,62 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/update-ca-certificates
+profile update-ca-certificates @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  @{exec_path} rmix,
+
+  @{sh_path}        rix,
+  @{bin}/basename   rix,
+  @{bin}/cat        rix,
+  @{bin}/chmod      rix,
+  @{bin}/find       rix,
+  @{bin}/flock      rix,
+  @{bin}/install    rix,
+  @{bin}/ln         rix,
+  @{bin}/mktemp     rix,
+  @{bin}/mv         rix,
+  @{bin}/openssl    rix,
+  @{bin}/readlink   rix,
+  @{bin}/rm         rix,
+  @{bin}/sed        rix,
+  @{bin}/sort       rix,
+  @{bin}/test       rix,
+  @{bin}/trust      rix,
+  @{bin}/wc         rix,
+
+  @{lib}/ca-certificates/update.d/ r,
+  @{lib}/ca-certificates/update.d/* rix,
+  /etc/ca-certificates/update.d/ r,
+  /etc/ca-certificates/update.d/* rix,
+
+  /usr/share/p11-kit/modules/{,*} r,
+
+  /etc/ r,
+  /etc/ca-certificates.conf r,
+  /etc/ssl/certs/ca-certificates.crt{,.new} rw,
+  /etc/ssl/certs/*.pem rw,
+  /etc/ssl/certs/@{hex}.[0-9] rw,
+
+  /var/lib/ca-certificates/ rwk,
+  /var/lib/ca-certificates/** rw,
+
+  / r,
+
+        /tmp/ r,
+  owner /tmp/ca-certificates{,.crt}.tmp.* rw,
+
+  /dev/tty rw,
+
+  include if exists <local/update-ca-certificates>
+}

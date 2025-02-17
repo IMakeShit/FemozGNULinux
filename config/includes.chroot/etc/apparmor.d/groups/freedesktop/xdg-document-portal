@@ -1,0 +1,87 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/xdg-document-portal
+profile xdg-document-portal @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.freedesktop.impl.portal.PermissionStore>
+
+  capability sys_nice,
+  capability sys_resource,
+  capability sys_admin,
+
+  mount fstype=fuse.portal -> @{run}/user/@{uid}/doc/,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=(term) peer=gdm,
+
+  ptrace (read) peer=xdg-desktop-portal,
+
+  unix (send receive) type=stream peer=(label=xdg-document-portal//fusermount),
+
+  # dbus: own bus=session name=org.freedesktop.portal.Documents path=/org/freedesktop/portal/documents
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  @{bin}/flatpak         rPUx,
+  @{bin}/fusermount{,3}  rCx -> fusermount,
+
+  / r,
+
+  owner @{user_share_dirs}/flatpak/db/documents r,
+  owner @{user_share_dirs}/Trash/files/** r,
+
+  owner @{run}/user/@{uid}/doc/ rw,
+
+        @{PROC}/1/cgroup r,
+        @{PROC}/sys/fs/pipe-max-size r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+          /dev/fuse rw,
+    owner /dev/tty@{int} rw,
+
+  profile fusermount {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    capability sys_admin,
+    capability dac_read_search,
+
+    mount options=(rw, rprivate) -> /,
+    mount options=(rw, rbind) @{run}/user/@{uid}/ -> /,
+    mount fstype=fuse.portal -> @{run}/user/@{uid}/doc/,
+
+    umount @{run}/user/@{uid}/doc/,
+
+    signal (receive) set=(cont, term) peer=systemd-user,
+
+    unix (send receive) type=stream peer=(label=xdg-document-portal),
+
+    @{bin}/fusermount{,3} mr,
+
+    /etc/fuse{,3}.conf r,
+
+    owner @{run}/user/@{uid}/doc/ rw,
+
+    @{PROC}/@{pids}/mounts r,
+
+          /dev/fuse rw,
+    owner /dev/tty@{int} rw,
+  
+    include if exists <local/xdg-document-portal_fusermount>
+  }
+
+  include if exists <local/xdg-document-portal>
+}

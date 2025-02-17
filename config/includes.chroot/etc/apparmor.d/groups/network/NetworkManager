@@ -1,0 +1,164 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/NetworkManager
+profile NetworkManager @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/fi.w1.wpa_supplicant1>
+  include <abstractions/bus/org.bluez>
+  include <abstractions/bus/org.freedesktop.hostname1>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/bus/org.freedesktop.ModemManager1>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/bus/org.freedesktop.resolve1>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  capability audit_write,
+  capability dac_override,
+  capability kill,
+  capability net_admin,
+  capability net_bind_service,
+  capability net_raw,
+  capability setgid,
+  capability setuid,
+  capability sys_chroot,
+  capability sys_module,
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network inet raw,
+  network inet6 raw,
+  network netlink raw,
+  network packet dgram,
+
+  signal (send) set=(term) peer=dnsmasq,
+
+  # dbus: own bus=system name=org.freedesktop.NetworkManager
+
+  dbus receive bus=system path=/org/freedesktop
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=:*),
+
+  dbus receive bus=system path=/
+       interface=org.freedesktop.DBus.ObjectManager
+       member=InterfacesRemoved
+       peer=(name=:*, label=bluetoothd),
+
+  dbus send bus=system path=/
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=:*, label=bluetoothd),
+
+  dbus send bus=system path=/org/fedoraproject/FirewallD1
+       interface=org.fedoraproject.FirewallD1.zone
+       member={changeZoneOfInterface,removeInterface}
+       peer=(name=org.freedesktop.DBus, label=firewalld),
+
+  dbus send bus=system path=/org/freedesktop
+       interface=org.freedesktop.DBus.ObjectManager
+       member=InterfacesAdded
+       peer=(name=org.freedesktop.DBus, label=nm-online),
+
+  dbus send bus=system path=/org/freedesktop/nm_dispatcher
+       interface=org.freedesktop.nm_dispatcher
+       member=Action
+       peer=(name=org.freedesktop.nm_dispatcher),
+
+  dbus send bus=system path=/org/freedesktop/resolve1
+       interface=org.freedesktop.resolve1.Manager
+       member={SetLink*,ResolveHostname}
+       peer=(name=org.freedesktop.resolve1, label=systemd-resolved),
+
+  dbus send bus=system path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  @{exec_path} mr,
+
+  @{sh_path}        rix,
+  @{bin}/nft        rix,
+
+  @{bin}/dnsmasq                                             rPx,
+  @{bin}/kmod                                                rPx,
+  @{bin}/netconfig                                          rPUx,
+  @{bin}/resolvconf                                          rPx,
+  @{bin}/systemctl                                           rCx -> systemctl,
+  @{lib}/{,NetworkManager/}nm-daemon-helper                  rPx,
+  @{lib}/{,NetworkManager/}nm-dhcp-helper                    rPx,
+  @{lib}/{,NetworkManager/}nm-dispatcher                     rPx,
+  @{lib}/{,NetworkManager/}nm-iface-helper                   rPx,
+  @{lib}/{,NetworkManager/}nm-initrd-generator               rPx,
+  @{lib}/{,NetworkManager/}nm-openvpn-auth-dialog            rPx,
+  @{lib}/{,NetworkManager/}nm-openvpn-service                rPx,
+  @{lib}/{,NetworkManager/}nm-openvpn-service-openvpn-helper rPx,
+
+  /usr/share/netplan/netplan.script rPx,
+  /usr/share/gvfs/remote-volume-monitors/{,*.monitor} r,
+
+  / r,
+  /etc/ r,
+  /etc/iproute2/* r,
+  /etc/machine-id r,
+  /etc/network/interfaces r,
+  /etc/network/interfaces.d/{,*} r,
+  /etc/NetworkManager/{,**} r,
+  /etc/NetworkManager/system-connections/{,**} w,
+  @{etc_rw}/resolv.conf rw,
+  @{etc_rw}/resolv.conf.[0-9A-Z]* rw,
+
+  /var/lib/iwd/*open* rw,
+  /var/lib/NetworkManager/{,**} rw,
+
+  @{sys}/bus/ r,
+  @{sys}/class/ r,
+  @{sys}/class/net/ r,
+  @{sys}/class/net/rfkill/ r,
+  @{sys}/class/rfkill/ r,
+
+  @{run}/network/ifstate r,
+  @{run}/NetworkManager/{,**} rw,
+  @{run}/nm-*.pid rw,
+  @{run}/nscd/db* rwl,
+  @{run}/systemd/inhibit/[0-9]*.ref rw,
+  @{run}/systemd/users/@{uid} r,
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/+platform:* r,
+  @{run}/udev/data/+rfkill:* r,
+  @{run}/udev/data/n@{int} r,
+
+  @{sys}/devices/**/uevent r,
+  @{sys}/devices/virtual/net/{,**} r,
+  @{sys}/devices/@{pci}/net/*/{,**} r,
+  @{sys}/devices/@{pci}/usb@{int}/**/net/{,**} r,
+
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+        @{PROC}/@{pids}/stat r,
+        @{PROC}/1/environ r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/kernel/osrelease r,
+        @{PROC}/sys/net/** rw,
+
+  /dev/rfkill rw,
+
+  profile systemctl {
+    include <abstractions/base>
+    include <abstractions/systemctl>
+
+    include if exists <local/NetworkManager_systemctl>
+  }
+
+  include if exists <local/NetworkManager>
+}

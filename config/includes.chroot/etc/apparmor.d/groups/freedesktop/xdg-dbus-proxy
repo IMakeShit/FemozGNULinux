@@ -1,0 +1,40 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xdg-dbus-proxy
+profile xdg-dbus-proxy @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.Avahi>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+
+  dbus send bus=session path=/org/freedesktop/portal/desktop
+       interface=org.freedesktop.portal.Realtime
+       member=MakeThreadRealtimeWithPID
+       peer=(name=org.freedesktop.portal.Desktop, label=xdg-desktop-portal),
+
+  @{exec_path} mr,
+
+  owner @{run}/firejail/dbus/@{int}/@{int}-{system,user} rw,
+  owner @{run}/user/@{uid}/.dbus-proxy/{system,session,a11y}-bus-proxy-@{rand6} rw,
+  owner @{run}/user/@{uid}/webkitgtk/a11y-proxy-@{rand6} rw,
+  owner @{run}/user/@{uid}/webkitgtk/bus-proxy-@{rand6} rw,
+  owner @{run}/user/@{uid}/webkitgtk/dbus-proxy-@{rand6} rw,
+
+  @{sys}/devices/virtual/thermal/thermal_zone[0-9]/hwmon[0-9]/temp* r,
+
+  /dev/dri/card@{int} rw,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/xdg-dbus-proxy>
+}

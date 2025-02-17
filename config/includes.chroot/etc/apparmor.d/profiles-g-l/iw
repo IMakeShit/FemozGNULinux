@@ -1,0 +1,30 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/iw
+profile iw @{exec_path} {
+  include <abstractions/base>
+
+  # To be able to manage network interfaces.
+  capability net_admin,
+
+  # Needed?
+  audit deny capability sys_module,
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{sys}/devices/@{pci}/ieee80211/phy[0-9]*/index r,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/iw>
+}

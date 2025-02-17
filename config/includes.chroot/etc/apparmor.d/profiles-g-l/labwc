@@ -1,0 +1,69 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/labwc
+profile labwc @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/devices-usb>
+  include <abstractions/dri-common>
+  include <abstractions/dri-enumerate>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/vulkan>
+  include <abstractions/wayland>
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  # Apps allowed to run
+  @{bin}/* rPUx,
+  @{lib}/* rPUx,
+
+  /usr/share/libinput/ r,
+  /usr/share/libinput/*.quirks r,
+  /usr/share/themes/**/themerc r,
+  /usr/share/X11/xkb/** r,
+
+  owner @{user_config_dirs}/labwc/ r,
+  owner @{user_config_dirs}/labwc/* r,
+
+  owner /dev/shm/wayland.mozilla.ipc.@{int} rw,
+
+  @{sys}/class/drm/ r,
+  @{sys}/class/input/ r,
+  @{sys}/devices/@{pci}/boot_vga r,
+  @{sys}/devices/**/uevent r,
+
+  @{run}/udev/data/+acpi:* r,             # for ?
+  @{run}/udev/data/+drm:card@{int}-* r,   # for screen outputs
+  @{run}/udev/data/+hid:* r,              # for HID-Compliant Keyboard
+  @{run}/udev/data/+hid:* r,              # for HID-Compliant Keyboard
+  @{run}/udev/data/+pci:* r,              # for VGA compatible controller
+  @{run}/udev/data/+platform:* r,         # for ?
+  @{run}/udev/data/+serio:* r,            # for touchpad?
+  @{run}/udev/data/+sound:card@{int} r,   # for sound
+  @{run}/udev/data/c13:@{int}  r,         # for /dev/input/*
+  @{run}/udev/data/c226:@{int} r,         # for /dev/dri/card*
+
+  @{run}/systemd/sessions/* r,
+  @{run}/systemd/seats/seat@{int} r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  owner /tmp/.X@{int}-lock rw,
+  owner /tmp/.X11-unix/ rw,
+  owner /tmp/.X11-unix/X@{int} rw,
+
+  include if exists <local/labwc>
+}

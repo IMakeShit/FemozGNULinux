@@ -1,0 +1,2 @@
+#!/bin/sh
+LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --ro-bind / / --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --unshare-all --share-net /usr/bin/onioncircuits "$@"

@@ -1,0 +1,147 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/udevadm @{lib}/systemd/systemd-udevd
+profile systemd-udevd @{exec_path} flags=(attach_disconnected,complain) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/systemd-common>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability mknod,
+  capability net_admin,
+  capability sys_admin,
+  capability sys_module,
+  capability sys_ptrace,
+  capability sys_rawio,
+  capability sys_resource,
+
+  ptrace (read),
+
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  @{exec_path} mrix,
+
+  @{sh_path}               rix,
+  @{bin}/{,e}grep          rix,
+  @{bin}/*-print-pci-ids   rix,
+  @{bin}/alsactl          rPUx,
+  @{bin}/cat               rix,
+  @{bin}/chgrp             rix,
+  @{bin}/chmod             rix,
+  @{bin}/cut               rix,
+  @{bin}/dmsetup          rPUx,
+  @{bin}/ethtool           rix,
+  @{bin}/kmod              rPx,
+  @{bin}/less              rPx -> child-pager,
+  @{bin}/ln                rix,
+  @{bin}/logger            rix,
+  @{bin}/ls                rix,
+  @{bin}/lvm               rPx,
+  @{bin}/mknod             rPx,
+  @{bin}/more              rPx -> child-pager,
+  @{bin}/multipath         rPx,
+  @{bin}/nfsrahead         rix,
+  @{bin}/nohup             rix,
+  @{bin}/pager             rPx -> child-pager,
+  @{bin}/perl              rix,
+  @{bin}/readlink          rix,
+  @{bin}/rm                rix,
+  @{bin}/sed               rix,
+  @{bin}/setfacl           rix,
+  @{bin}/sg_inq            rix,
+  @{bin}/snap             rPUx,
+  @{bin}/systemctl         rCx -> systemctl,
+  @{bin}/systemd-run       rix,
+  @{bin}/touch             rix,
+  @{bin}/unshare           rix,
+  @{bin}/wc                rix,
+
+  @{lib}/crda/*                           rPUx,
+  @{lib}/gdm-runtime-config               rPx,
+  @{lib}/nfsrahead                        rPUx,
+  @{lib}/open-iscsi/net-interface-handler rPUx,
+  @{lib}/pm-utils/power.d/*               rPUx,
+  @{lib}/snapd/snap-device-helper         rPx,
+  @{lib}/systemd/systemd-*                rPx,
+  @{lib}/udev/*                           rPUx,
+  /usr/share/hplip/config_usb_printer.py  rPUx,
+
+  /etc/console-setup/*.sh            rPUx,
+  /etc/network/cloud-ifupdown-helper rPUx,
+
+  /etc/machine-id r,
+
+  /etc/default/* r,
+
+  /etc/nfs.conf rk,
+
+  /etc/udev/ r,
+  /etc/udev/udev.conf r,
+  /etc/udev/rules.d/ r,
+  /etc/udev/rules.d/*.rules r,
+
+  /etc/udev/hwdb.d/ r,
+  /etc/udev/hwdb.d/[0-9][0-9]-*.hwdb r,
+  /etc/udev/hwdb.bin rw,
+  /etc/udev/.#hwdb.bin* rw,
+
+  /etc/modprobe.d/ r,
+  /etc/modprobe.d/*.conf r,
+
+  /etc/systemd/network/ r,
+  /etc/systemd/network/[0-9][0-9]-*.link r,
+
+  @{run}/udev/ rw,
+  @{run}/udev/** rwk,
+
+  @{run}/systemd/network/ r,
+  @{run}/systemd/network/*.link rw,
+  @{run}/systemd/notify rw,
+  @{run}/systemd/seats/seat@{int} r,
+
+  @{sys}/** rw,
+
+        @{PROC}/@{pid}/mountinfo r,
+        @{PROC}/@{pids}/cgroup r,
+        @{PROC}/devices r,
+        @{PROC}/driver/nvidia/gpus/ r,
+        @{PROC}/driver/nvidia/gpus/*/information r,
+        @{PROC}/pressure/* r,
+        @{PROC}/sys/fs/nr_open r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/loginuid r,
+  owner @{PROC}/@{pid}/oom_score_adj rw,
+
+  /dev/ rw,
+  /dev/** rwk,
+
+  profile systemctl flags=(attach_disconnected,complain) {
+    include <abstractions/base>
+    include <abstractions/systemctl>
+
+    capability net_admin,
+    capability sys_ptrace,
+
+    # / r,
+
+    @{PROC}/sys/kernel/cap_last_cap r,
+
+    include if exists <local/systemd-udevd_systemctl>
+  }
+
+  include if exists <local/systemd-udevd>
+}

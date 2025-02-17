@@ -1,0 +1,90 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/update-manager
+profile update-manager @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/bus/org.freedesktop.UPower>
+  include <abstractions/consoles>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  signal (send) peer=apt-methods-http,
+
+  # dbus: own bus=session name=org.freedesktop.UpdateManager
+
+  # dbus: talk bus=system name=org.debian.apt label=apt
+
+  @{exec_path} mr,
+
+  @{sh_path}                      rix,
+  @{bin}/dpkg                     rPx -> child-dpkg,
+  @{bin}/hwe-support-status       rPx,
+  @{bin}/ischroot                 rix,
+  @{bin}/lsb_release              rPx -> lsb_release,
+  @{bin}/snap                    rPUx,
+  @{bin}/software-properties-gtk  rPx,
+  @{bin}/uname                    rix,
+  @{lib}/apt/methods/http{,s}     rPx,
+
+  /usr/share/distro-info/{,**} r,
+  /usr/share/ubuntu-release-upgrader/{,**} r,
+  /usr/share/update-manager/{,**} r,
+
+  /etc/gtk-3.0/settings.ini r,
+  /etc/pulse/client.conf r,
+  /etc/pulse/client.conf.d/{,**} r,
+  /etc/ubuntu-advantage/uaclient.conf r,
+  /etc/update-manager/{,**} r,
+
+  /boot/ r,
+
+  /var/lib/dpkg/info/*.list r,
+  /var/lib/dpkg/updates/ r,
+  /var/lib/snapd/desktop/applications/{,mimeinfo.cache} r,
+  /var/lib/snapd/desktop/icons/{,*} r,
+  /var/lib/update-manager/{,**} rw,
+
+  owner @{user_cache_dirs}/update-manager-core/{,**} rw,
+
+  owner @{user_config_dirs}/pulse/cookie rk,
+
+  owner @{run}/user/@{uid}/pulse/ r,
+  owner @{run}/user/@{uid}/pulse/native rw,
+
+  @{run}/systemd/inhibit/*.ref w,
+
+        @{PROC}/@{pids}/mountinfo r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /dev/ptmx rw,
+  /dev/shm/ r,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/update-manager>
+}

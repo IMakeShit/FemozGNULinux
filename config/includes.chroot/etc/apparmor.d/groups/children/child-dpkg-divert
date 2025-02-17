@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# Note: This profile does not specify an attachment path because it is
+# intended to be used only via "Px -> child-dpkg-divert" exec transitions
+# from other profiles. We want to confine the dpkg-divert(1) utility when
+# it is invoked from other confined applications, but not when it is used
+# in regular (unconfined) shell scripts or run directly by the user.
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dpkg-divert
+profile child-dpkg-divert {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  /var/lib/dpkg/arch r,
+  /var/lib/dpkg/status r,
+  /var/lib/dpkg/updates/ r,
+  /var/lib/dpkg/triggers/File r,
+  /var/lib/dpkg/triggers/Unincorp r,
+  /var/lib/dpkg/diversions r,
+
+  # file_inherit
+  /tmp/#@{int} rw,
+
+  include if exists <local/child-dpkg-divert>
+}

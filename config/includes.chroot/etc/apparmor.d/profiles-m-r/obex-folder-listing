@@ -1,0 +1,24 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/obex-folder-listing
+profile obex-folder-listing @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/private-files-strict>
+  include <abstractions/user-download-strict>
+
+  @{exec_path} mr,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/**/ r,
+  owner @{MOUNTS}/ r,
+  owner @{MOUNTS}/**/ r,
+
+  include if exists <local/obex-folder-listing>
+}

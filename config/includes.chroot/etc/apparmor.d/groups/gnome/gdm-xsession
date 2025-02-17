@@ -1,0 +1,94 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{etc_ro}/gdm{3,}/Xsession
+profile gdm-xsession @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bash>
+  include <abstractions/consoles>
+  include <abstractions/dconf-write>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  @{exec_path} mr,
+
+  @{sh_path}             rix,
+  @{bin}/{,e}grep        rix,
+  @{bin}/{m,g,}awk       rix,
+  @{bin}/cat             rix,
+  @{bin}/expr            rix,
+  @{bin}/gettext         rix,
+  @{bin}/gettext.sh      r,
+  @{bin}/gnome-session   rix,
+  @{bin}/id              rix,
+  @{bin}/locale          rix,
+  @{bin}/locale-check    rix,
+  @{bin}/mktemp          rix,
+  @{bin}/run-parts       rix,
+  @{bin}/sed             rix,
+  @{bin}/ssh-agent       rix,
+  @{bin}/tail            rix,
+  @{bin}/tr              rix,
+  @{bin}/truncate        rix,
+  @{bin}/tty             rix,
+  @{bin}/which{,.debianutils}  rix,
+  @{bin}/zsh             rix,
+
+  @{bin}/dbus-update-activation-environment    rCx -> dbus,
+  @{bin}/dpkg-query                            rpx,
+  @{bin}/flatpak                               rPx,
+  @{bin}/gpgconf                               rPx,
+  @{bin}/gsettings                             rPx,
+  @{bin}/im-launch                             rPx,
+  @{bin}/systemctl                             rCx -> systemctl,
+  @{bin}/xbrlapi                               rPx,
+  @{bin}/xhost                                 rPx,
+  @{bin}/xrdb                                  rPx,
+  @{etc_ro}/X11/xdm/Xsession                   rPx,
+  @{lib}/gnome-session-binary                  rPx,
+
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+  /usr/share/im-config/data/{,*} r,
+  /usr/share/im-config/xinputrc.common r,
+
+  /etc/debuginfod/{,*} r,
+  /etc/default/im-config r,
+  /etc/X11/{,**} r,
+
+  owner /tmp/gdm{3,}-config-err-@{rand6} rw,
+
+  /dev/tty@{int} rw,
+
+  profile dbus {
+    include <abstractions/base>
+    include <abstractions/bus-session>
+
+    dbus send bus=session path=/org/freedesktop/systemd1
+         interface=org.freedesktop.systemd1.Manager
+         member=SetEnvironment
+         peer=(name=org.freedesktop.systemd1),
+
+    @{bin}/dbus-update-activation-environment mr,
+  
+    owner @{HOME}/.xsession-errors w,
+
+    /dev/tty rw,
+    /dev/tty@{int} rw,
+
+    include if exists <local/gdm-xsession_dbus>
+  }
+
+  profile systemctl {
+    include <abstractions/base>
+    include <abstractions/systemctl>
+
+    include if exists <local/gdm-xsession_systemctl>
+  }
+
+  include if exists <local/gdm-xsession>
+}

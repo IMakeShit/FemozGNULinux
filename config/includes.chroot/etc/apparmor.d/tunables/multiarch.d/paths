@@ -1,0 +1,61 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# Define some paths for some commonly used programs
+
+# Default distribution shells
+@{sh} = sh zsh bash dash
+@{sh_path} = @{bin}/@{sh}
+
+# All interactive shells users may want to use
+@{shells} = sh zsh bash dash fish rbash ksh tcsh csh
+@{shells_path} = @{bin}/@{shells}
+
+# Browsers
+
+@{brave_name} = brave{,-beta,-dev,-bin}
+@{brave_lib_dirs} = /opt/brave{-bin,.com}{,/@{brave_name}}
+@{brave_path} =  @{brave_lib_dirs}/@{brave_name}
+
+@{chrome_name} = chrome{,-beta,-stable,-unstable}
+@{chrome_lib_dirs} = /opt/google/@{chrome_name}
+@{chrome_path} =  @{opera_lib_dirs}/@{chrome_name}
+
+@{chromium_name} = chromium
+@{chromium_lib_dirs} = @{lib}/@{chromium_name}
+@{chromium_path} =  @{chromium_lib_dirs}/@{chromium_name}
+
+@{firefox_name} = firefox{,.sh,-esr,-bin}
+@{firefox_lib_dirs} = @{lib}/@{firefox_name} /opt/@{firefox_name}
+@{firefox_path} = @{bin}/@{firefox_name} @{firefox_lib_dirs}/@{firefox_name}
+
+@{opera_name} = opera{,-beta,-developer}
+@{opera_lib_dirs} = @{lib}/@{multiarch}/@{opera_name}
+@{opera_path} =  @{opera_lib_dirs}/@{opera_name}
+
+@{browsers_path} = @{brave_path} @{chrome_path} @{chromium_path} @{firefox_path} @{opera_path}
+
+# Emails
+
+@{thunderbird_name} = thunderbird{,.sh,-bin} 
+@{thunderbird_lib_dirs} = @{lib}/@{thunderbird_name}
+@{thunderbird_path} = @{bin}/@{thunderbird_name} @{thunderbird_lib_dirs}/@{thunderbird_name}
+
+# Open
+
+@{open_path}  = @{bin}/exo-open @{bin}/xdg-open
+@{open_path} += @{lib}/@{multiarch}/glib-[0-9]*/gio-launch-desktop @{lib}/gio-launch-desktop
+
+# Experimental - May be modified/removed without notice
+# Coreutils programs that should not have dedicated profile
+@{coreutils}  = {,m}awk b2sum base32 base64 basename basenc cat chcon chgrp chmod chown
+@{coreutils} += cksum comm cp csplit cut date dd df dir dircolors dirname du echo env expand
+@{coreutils} += expr factor false find fmt fold gawk grep head hostid id install join link
+@{coreutils} += ln logname ls md5sum mkdir mkfifo mknod mktemp mv nice nl nohup nproc numfmt
+@{coreutils} += od paste pathchk pinky pr printenv printf ptx pwd readlink realpath rm rmdir
+@{coreutils} += runcon sed seq sha1sum sha224sum sha256sum sha384sum sha512sum shred shuf sleep
+@{coreutils} += sort split stat stdbuf stty sum sync tac tail tee test timeout touch tr true
+@{coreutils} += truncate tsort tty uname unexpand uniq unlink vdir wc who whoami xargs yes
+@{coreutils_path} = @{bin}/@{coreutils}
+

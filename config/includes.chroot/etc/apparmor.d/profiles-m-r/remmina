@@ -1,0 +1,63 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/remmina
+profile remmina @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.hostname1>
+  include <abstractions/bus/org.freedesktop.secrets>
+  include <abstractions/bus/org.gtk.Private.RemoteVolumeMonitor>
+  include <abstractions/bus/org.kde.StatusNotifierWatcher>
+  include <abstractions/dconf-write>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+  include <abstractions/X-strict>
+
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  # dbus: own bus=session name=org.remmina.Remmina
+
+  dbus (send, receive) bus=session path=/org/ayatana/NotificationItem/remmina_icon{,/**}
+       peer=(name="{:*,org.freedesktop.DBus}"),  # all interfaces and members
+
+  @{exec_path} r,
+
+  /usr/share/remmina/{,**} r,
+  /usr/share/themes/{,**} r,
+
+  /etc/timezone r,
+  /etc/ssh/ssh_config r,
+  /etc/ssh/ssh_config.d/{,*} r,
+  /etc/gtk-3.0/settings.ini r,
+
+  owner @{HOME}/@{XDG_SSH_DIR}/{,*} r,
+
+  owner @{user_cache_dirs}/remmina/{,**} rw,
+  owner @{user_config_dirs}/autostart/remmina-applet.desktop r,
+  owner @{user_config_dirs}/freerdp/known_hosts2 rwk,
+  owner @{user_config_dirs}/gtk-3.0/bookmarks r,
+  owner @{user_config_dirs}/remmina/{,**} rw,
+  owner @{user_share_dirs}/remmina/{,**} rw,
+
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  owner @{run}/user/@{uid}/keyring/ssh rw,
+
+  include if exists <local/remmina>
+}

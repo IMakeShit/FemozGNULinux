@@ -1,0 +1,25 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dunst
+profile dunst @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/freedesktop.org>
+
+  @{exec_path} mr,
+
+  /etc/xdg/dunst/dunstrc r,
+  owner @{user_config_dirs}/dunst/dunstrc r,
+
+  owner @{HOME}/.Xauthority r,
+
+  include if exists <local/dunst>
+}

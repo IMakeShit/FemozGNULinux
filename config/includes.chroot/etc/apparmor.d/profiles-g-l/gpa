@@ -1,0 +1,55 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gpa
+profile gpa @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/gtk>
+  include <abstractions/freedesktop.org>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/user-download-strict>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} mr,
+
+  @{bin}/gpgconf           rPx,
+  @{bin}/gpg-connect-agent rPx,
+  @{bin}/gpg{,2}           rPx,
+  @{bin}/gpgsm             rPx,
+
+  /usr/share/gpa/{,*} r,
+
+  owner @{HOME}/@{XDG_GPG_DIR}/gpa.conf rw,
+  owner @{HOME}/@{XDG_GPG_DIR}/S.uiserver rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  /tmp/ r,
+
+  # To create/verify singatures
+  owner /**.{asc,sig,sign} rw,
+
+  # To encrypt/decrypt files
+  owner /**.{gpg,txt} rw,
+
+  # Files to verify
+  owner /**.tar.gz r,
+
+  owner /tmp/xauth-@{int}-_[0-9] r,
+
+  # External apps
+  @{lib}/firefox/firefox rPUx,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/gpa>
+}

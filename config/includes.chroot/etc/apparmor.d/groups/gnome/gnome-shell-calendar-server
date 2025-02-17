@@ -1,0 +1,47 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gnome-shell/}gnome-shell-calendar-server
+profile gnome-shell-calendar-server @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/dconf-write>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  # dbus: own bus=session name=org.gnome.Shell.CalendarServer
+
+  dbus (send receive) bus=session path=/org/gnome/evolution/dataserver/{,**}
+       interface=org.freedesktop.DBus.Properties
+       peer=(name=:*, label=evolution-*),
+
+  dbus (send receive) bus=session path=/org/gnome/evolution/dataserver/{,**}
+       interface=org.gnome.evolution.dataserver.Calendar*
+       peer=(name=:*, label=evolution-*),
+
+  dbus send bus=session path=/org/gnome/evolution/dataserver/SourceManager
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=:*, label=evolution-source-registry),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect 
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+  /usr/share/{,zoneinfo-}icu/{,**} r,
+
+  /etc/sysconfig/clock r,
+  /etc/timezone r,
+
+  include if exists <local/gnome-shell-calendar-server>
+}

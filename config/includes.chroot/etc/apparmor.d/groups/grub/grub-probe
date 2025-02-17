@@ -1,0 +1,48 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/grub-probe
+profile grub-probe @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/disks-read>
+
+  capability sys_admin,
+
+  @{exec_path} mr,
+
+  /{usr/,}{local/,}{s,}bin/zpool rPx,
+  @{bin}/lsb_release        rPx -> lsb_release,
+  @{bin}/lvm                rPx,
+  @{bin}/udevadm            rPx,
+
+  /usr/share/grub/* r,
+
+  / r,
+  /boot/ r,
+  /boot/grub/themes/{,**} r,
+
+  @{PROC}/@{pids}/mountinfo r,
+  @{PROC}/devices r,
+  
+  /dev/*vg*/ r,
+  /dev/bsg/ r,
+  /dev/cpu/ r,
+  /dev/cpu/@{int}/ r,
+  /dev/dri/ r,
+  /dev/dri/by-path/ r,
+  /dev/hugepages/ r,
+  /dev/mapper/control rw,
+  /dev/mqueue/ r,
+  /dev/shm/ r,
+  /dev/snd/ r,
+  /dev/snd/by-path/ r,
+
+  include if exists <local/grub-probe>
+}

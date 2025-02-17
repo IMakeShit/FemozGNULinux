@@ -1,0 +1,11 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+  unix (send, receive) type=dgram peer=(addr="@var/run/nvidia-xdriver-*"),
+
+  owner @{HOME}/.nv/nvidia-application-profiles* r,
+
+  /etc/nvidia/nvidia-application-profiles* r,
+
+  /dev/char/195:@{int} rw,  # Nvidia graphics devices

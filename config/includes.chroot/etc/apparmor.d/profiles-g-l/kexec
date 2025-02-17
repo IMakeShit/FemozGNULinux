@@ -1,0 +1,30 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/kexec
+profile kexec @{exec_path} flags=(complain) {
+  include <abstractions/base>
+
+  capability sys_boot,
+
+  @{exec_path} mr,
+
+  owner /boot/{initrd.img,vmlinuz}-* r,
+
+  @{sys}/firmware/memmap/ r,
+  @{sys}/firmware/memmap/@{int}/{start,end,type} r,
+  @{sys}/kernel/boot_params/data r,
+
+        @{PROC}/cmdline r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /dev/fb[0-9] r,
+
+  include if exists <local/kexec>
+}

@@ -1,0 +1,53 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ip
+profile ip @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  capability bpf,
+  capability net_admin,
+  capability sys_admin,
+  capability sys_module,
+
+  network netlink raw,
+
+  mount options=(rw, bind, rshared)   -> /{var/,}run/netns/,
+  mount options=(rw, rslave)    -> /,
+  mount options=(rw, bind)    / -> /{var/,}run/netns/*,
+  mount options=(rw, bind)    /etc/netns/firefox/resolv.conf -> /etc/resolv.conf,
+  mount fstype=sysfs            -> /sys/,
+
+  umount @{run}/netns/*,
+  umount /sys/,
+
+  @{exec_path} mrix,
+  @{sh_path} rix,
+
+  / r,
+
+  /etc/iproute2/{,**} r,
+  /etc/netns/*/ r,
+
+  /usr/share/iproute2/{,**} r,
+
+        @{run}/netns/* rw,
+  owner @{run}/netns/ rwk,
+
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/net/dev_mcast r,
+  owner @{PROC}/@{pid}/net/igmp{,6} r,
+  owner @{PROC}/sys/net/ipv{4,6}/route/flush w,
+
+  /dev/tty@{int} rw,
+
+  include if exists <local/ip>
+}

@@ -1,0 +1,114 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/mpv
+profile mpv @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/consoles>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-download-strict>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  signal (receive) set=(term, kill),
+
+  signal (send) set=(term, kill) peer=youtube-dl,
+  signal (send) set=(term, kill) peer=yt-dlp,
+
+  @{exec_path} mr,
+
+  @{bin}/xdg-screensaver rCx -> xdg-screensaver,
+
+  @{bin}/youtube-dl rPx,
+  @{bin}/yt-dlp     rPx,
+
+  /usr/share/pipewire/client-rt.conf r,
+
+  /etc/libva.conf r,
+  /etc/mpv/* r,
+  /etc/pipewire/client-rt.conf.d/{,**} r,
+  /etc/samba/smb.conf r,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  owner @{HOME}/ r,
+  owner @{user_music_dirs}/{,**} rw,
+  owner @{user_pictures_dirs}/{,**} rw,
+  owner @{user_torrents_dirs}/{,**} rw,
+  owner @{user_videos_dirs}/{,**} rw,
+
+  owner @{user_cache_dirs}/mpv/{,**} rw,
+  owner @{user_config_dirs}/mpv/{,**} rw,
+
+        /tmp/ r,
+  owner /tmp/mpsyt-input* rw,
+  owner /tmp/mpsyt-mpv*.sock rw,
+  owner /tmp/smplayer-mpv-* rw,
+  owner /tmp/smplayer_preview/@{int}.{jpg,png} w,
+  owner /tmp/smplayer_screenshots/cap_*.{jpg,png} w,
+
+  owner @{run}/user/@{uid}/gvfs/smb-share:server=*,share=**/ r,
+  owner @{run}/user/@{uid}/gvfs/smb-share:server=*,share=** r,
+
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/task/ r,
+
+  @{run}/udev/data/+input:input@{int} r,  # for mouse, keyboard, touchpad
+  @{run}/udev/data/c13:@{int} r,          # for /dev/input/*
+  @{run}/udev/data/c116:@{int} r,         # for ALSA
+
+  @{sys}/bus/ r,
+  @{sys}/class/ r,
+  @{sys}/class/input/ r,
+  @{sys}/devices/**/input/**/capabilities/* r,
+  @{sys}/devices/**/input/**/uevent r,
+  @{sys}/devices/**/sound/**/capabilities/* r,
+  @{sys}/devices/**/sound/**/uevent r,
+
+        /dev/input/event@{int} r,
+  owner /dev/tty@{int} rw,
+
+  profile xdg-screensaver {
+    include <abstractions/base>
+    include <abstractions/consoles>
+
+    @{bin}/xdg-screensaver mr,
+
+    @{sh_path}          rix,
+    @{bin}/mv           rix,
+    @{bin}/{,e}grep     rix,
+    @{bin}/sed          rix,
+    @{bin}/which{,.debianutils}        rix,
+    @{bin}/xset         rix,
+    @{bin}/xautolock    rix,
+    @{bin}/dbus-send    rix,
+    @{bin}/xscreensaver-command rix,
+
+    owner @{HOME}/.Xauthority r,
+
+    # file_inherit
+    /dev/dri/card@{int} rw,
+    network inet stream,
+    network inet6 stream,
+  }
+
+  include if exists <local/mpv>
+}

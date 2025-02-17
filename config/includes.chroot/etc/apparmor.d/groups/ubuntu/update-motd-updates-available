@@ -1,0 +1,55 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/update-notifier/update-motd-updates-available
+profile update-motd-updates-available @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{bin}/python3.@{int} r,
+
+  @{sh_path}                           rix,
+  @{bin}/apt-config                    rPx,
+  @{bin}/chmod                         rix,
+  @{bin}/dirname                       rix,
+  @{bin}/dpkg                          rPx -> child-dpkg,
+  @{bin}/find                          rix,
+  @{bin}/ischroot                      rix,
+  @{bin}/lsb_release                   rPx -> lsb_release,
+  @{bin}/mktemp                        rix,
+  @{bin}/mv                            rix,
+  @{bin}/rm                            rix,
+  @{lib}/update-notifier/apt_check.py  rix,
+
+  /usr/share/distro-info/{,**} r,
+
+  /etc/machine-id r,
+
+  /var/lib/update-notifier/{,*} rw,
+  /var/lib/ubuntu-advantage/apt-esm/var/cache/apt/*pkgcache.bin* rw,
+
+  /var/log/unattended-upgrades/unattended-upgrades-dpkg.log rw,
+
+  owner /var/cache/apt/ rw,
+  owner /var/cache/apt/** rwk,
+
+  /tmp/ r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+        @{PROC}/@{pids}/mountinfo r,
+
+  include if exists <local/update-motd-updates-available>
+}

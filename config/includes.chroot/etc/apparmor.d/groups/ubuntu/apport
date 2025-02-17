@@ -1,0 +1,56 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/apport/apport 
+profile apport @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.gnome.SessionManager>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+
+  capability chown,
+  capability dac_read_search,
+  capability fsetid,
+  capability setgid,
+  capability setuid,
+  capability sys_ptrace,
+
+  ptrace (read) peer=gnome-shell,
+  ptrace (read) peer=snap.cups.cupsd,
+  ptrace (read) peer=tracker-extract,
+
+  @{exec_path} mr,
+
+  @{bin}/dpkg rPx,
+  @{bin}/gdbus rix,
+
+  /usr/share/apport/{,**} r,
+
+  /etc/apport/report-ignore/{,**} r,
+
+        /var/crash/ rw,
+        /var/crash/*.@{uid}.crash rw,
+  owner /var/log/apport.log rw,
+
+  @{run}/apport.lock rwk,
+
+        @{PROC}/@{pid}/environ r,
+        @{PROC}/@{pid}/stat r,
+        @{PROC}/sys/fs/suid_dumpable w,
+        @{PROC}/sys/kernel/core_pattern r,
+        @{PROC}/sys/kernel/core_pattern w,
+        @{PROC}/sys/kernel/core_pipe_limit w,
+  owner @{PROC}/@{pid}/attr/current r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/apport>
+}

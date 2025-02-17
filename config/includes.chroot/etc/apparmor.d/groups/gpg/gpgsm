@@ -1,0 +1,32 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gpgsm
+profile gpgsm @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{bin}/dirmngr rPx,
+
+  /usr/share/gnupg/* r,
+
+  /etc/gcrypt/hwf.deny r,
+
+  deny /usr/bin/.gnupg/ w,
+
+  owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+  owner /var/lib/*/.gnupg/** rwkl -> /var/lib/*/.gnupg/**,
+
+  include if exists <local/gpgsm>
+}

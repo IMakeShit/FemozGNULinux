@@ -1,0 +1,41 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/e2fsck @{bin}/fsck.ext2 @{bin}/fsck.ext3 @{bin}/fsck.ext4
+profile e2fsck @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/disks-write>
+  include <abstractions/user-download-strict>
+
+  capability dac_read_search,
+  capability sys_rawio,
+
+  @{exec_path} mr,
+
+  # To check for badblocks
+  @{sh_path}        rix,
+  @{bin}/badblocks  rPx,
+
+  /usr/share/file/misc/magic.mgc r,
+
+  # A place for file images
+  owner @{user_img_dirs}/{,**} rwk,
+
+        @{run}/blkid/ rw,
+        @{run}/systemd/fsck.progress rw,
+  owner @{run}/blkid/blkid.tab.old rwl -> @{run}/blkid/blkid.tab,
+  owner @{run}/blkid/blkid.tab{,-@{rand6}} rw,
+
+  @{sys}/devices/**/power_supply/AC/online r,
+
+        @{PROC}/swaps r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  include if exists <local/e2fsck>
+}

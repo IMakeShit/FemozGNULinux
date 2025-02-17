@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/gdm/generate-config
+profile gdm-generate-config @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability chown,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability setgid,
+  capability setuid,
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/dconf       rix,
+  @{bin}/install     rix,
+  @{bin}/pgrep       rix,
+  @{bin}/pkill       rix,
+  @{bin}/setpriv     rix,
+  @{bin}/setsid      rix,
+
+  /etc/gdm{3,}/* r,
+  /usr/share/gdm/{,**} r,
+
+  /var/lib/ r,
+  /var/lib/gdm{3,}/ rw,
+  /var/lib/gdm{3,}/{,**} r,
+  /var/lib/gdm{3,}/greeter-dconf-defaults rw,
+  /var/lib/gdm{3,}/greeter-dconf-defaults.@{rand6} w,
+
+  @{PROC}/ r,
+  @{PROC}/@{pid}/cgroup  r,
+  @{PROC}/@{pid}/cmdline r,
+  @{PROC}/@{pid}/stat r,
+  @{PROC}/uptime r,
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node@{int}/meminfo r,
+
+  include if exists <local/gdm-generate-config>
+}

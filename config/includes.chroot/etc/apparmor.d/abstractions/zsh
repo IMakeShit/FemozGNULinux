@@ -1,0 +1,29 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# This abstraction is only required when an interactive shell is started.
+# Classic shell scripts do not need it.
+
+  @{lib}/@{multiarch}/zsh/@{int}/zsh/*.so mr,
+
+  /usr/share/zsh/{,**} r,
+  /usr/local/share/zsh/{,**} r,
+
+  /etc/zsh/* r,
+
+  owner @{HOME}/.zshrc r,
+  owner @{HOME}/.zshenv r,
+  owner @{HOME}/.zsh_history rw,
+  owner @{HOME}/.zsh_history.LOCK rwk,
+
+  owner @{HOME}/.oh-my-zsh/{,**} r,
+  owner @{HOME}/.oh-my-zsh/log/update.lock/ w,
+
+  owner @{HOME}/.zcompdump-* rw,
+
+  owner @{user_config_dirs}/zsh/.zcompdump-* rw,
+  owner @{user_config_dirs}/zsh/{,**} r,
+
+  include if exists <abstractions/zsh.d>

@@ -1,0 +1,55 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/org.gnome.NautilusPreviewer
+profile org.gnome.NautilusPreviewer @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+  include <abstractions/deny-sensitive-home>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/nameservice-strict>
+  include <abstractions/private-files-strict>
+  include <abstractions/video>
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{bin}/gjs-console r,
+
+  @{open_path}         rPx -> child-open,
+
+  /usr/share/poppler/{,**} r,
+  /usr/share/sushi/org.gnome.NautilusPreviewer.*.gresource r,
+
+  /etc/machine-id r,
+
+  # Full read access to user's data
+  owner @{MOUNTS}/{,**} r,
+  owner @{HOME}/{,**} r,
+
+  owner @{user_config_dirs}/pulse/cookie rk,
+
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+  @{sys}/fs/cgroup/user.slice/user-@{uid}.slice/user@@{uid}.service/app.slice/*org.gnome.NautilusPreviewer.slice/*/memory.* r,
+  @{sys}/fs/cgroup/user.slice/user-@{uid}.slice/user@@{uid}.service/session.slice/dbus.service/memory.* r,
+
+        @{PROC}/@{pid}/cgroup r,
+        @{PROC}/zoneinfo r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/stat r,
+  owner @{PROC}/@{pid}/task/@{tid}/stat r,
+
+  /dev/media@{int} r,
+
+  include if exists <local/org.gnome.NautilusPreviewer>
+}

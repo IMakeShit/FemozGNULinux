@@ -1,0 +1,87 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/tracker-miner-fs-{,control-}3
+profile tracker-miner @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.UPower>
+  include <abstractions/bus/org.gtk.Private.RemoteVolumeMonitor>
+  include <abstractions/bus/org.gtk.vfs.Daemon>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/deny-sensitive-home>
+  include <abstractions/disks-read>
+  include <abstractions/gnome-strict>
+  include <abstractions/gstreamer>
+  include <abstractions/nameservice-strict>
+  include <abstractions/private-files-strict>
+
+  network netlink raw,
+
+  signal (receive) set=(cont term)  peer=@{systemd_user},
+  signal (receive) set=(term, kill) peer=gdm,
+  signal (receive) set=(hup)        peer=gdm-session-worker,
+
+  # dbus: own bus=session name=org.freedesktop.Tracker3 interface=org.freedesktop.DBus.{Properties,Peer}
+
+  @{exec_path} mr,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/gdm/greeter/applications/{,mimeinfo.cache,*.list} r,
+  /usr/share/gvfs/remote-volume-monitors/{,*.monitor} r,
+  /usr/share/tracker3-miners/{,**} r,
+  /usr/share/tracker3/{,**} r,
+
+  /etc/fstab r,
+  /etc/blkid.conf r,
+  /etc/timezone r,
+
+  /var/lib/flatpak/exports/share/applications/{,mimeinfo.cache} r,
+  /var/lib/snapd/desktop/applications/{,mimeinfo.cache} r,
+
+  /var/lib/gdm{3,}/ r,
+  /var/lib/gdm{3,}/.cache/gstreamer-*/registry.*.bin r,
+  /var/lib/gdm{3,}/.cache/tracker3/{,tracker3/}files/{,**} rwk,
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm{3,}/.local/share/applications/ r,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+
+  /var/lib/lightdm/.config/dconf/user r,
+  /var/lib/lightdm/.cache/tracker3/files/meta.db{,-wal} rwk,
+  /var/lib/lightdm/.cache/tracker3/files/no-need-mtime-check.txt{,.@{rand6}} rw,
+
+  owner /var/tmp/etilqs_@{hex} rw,
+
+  # Allow to search user files
+  owner @{HOME}/{,**} r,
+  owner @{MOUNTS}/{,**} r,
+  owner /tmp/*/{,**} r,
+
+  owner @{user_cache_dirs}/tracker3/ rw,
+  owner @{user_cache_dirs}/tracker3/files/{,**} rwk,
+  owner @{user_config_dirs}/tracker3/{,**} rwk,
+
+  @{run}/blkid/blkid.tab r,
+  @{run}/mount/utab r,
+
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+        @{PROC}/@{pid}/cmdline r,
+        @{PROC}/sys/fs/fanotify/max_user_marks r,
+        @{PROC}/sys/fs/inotify/max_user_watches r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+
+        /dev/media@{int} rw,
+        /dev/video@{int} rw,
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/tracker-miner>
+}

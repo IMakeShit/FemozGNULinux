@@ -1,0 +1,160 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/cron.{hourly,daily,weekly,monthly}/popularity-contest
+profile cron-popularity-contest @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} r,
+  @{sh_path}                 rix,
+
+  @{bin}/popularity-contest rPx,
+
+  @{bin}/cat                 rix,
+  @{bin}/date                rix,
+  @{bin}/grep                rix,
+  @{bin}/logger              rix,
+  @{bin}/mkdir               rix,
+  @{bin}/mktemp              rix,
+  @{bin}/mv                  rix,
+  @{bin}/rm                  rix,
+  @{bin}/setsid              rix,
+
+  # To send reports via TOR
+  @{bin}/torify              rix,
+  @{bin}/torsocks            rix,
+  @{bin}/getcap              rix,
+
+  /usr/share/popularity-contest/popcon-upload rCx -> popcon-upload,
+  @{bin}/gpg{,2}             rCx -> gpg,
+  @{bin}/runuser            rCx -> runuser,
+  @{bin}/savelog             rCx -> savelog,
+
+  /usr/share/popularity-contest/ r,
+  /usr/share/popularity-contest/default.conf r,
+
+  /etc/popularity-contest.conf r,
+
+  # For shell pwd
+  / r,
+  /root/ r,
+
+  /var/log/ r,
+  /var/log/popularity-contest{,.new} rw,
+  /var/log/popularity-contest{,.new}.gpg rw,
+  /var/log/popularity-contest.@{int} rw,
+
+  # Store last successful http submission timestamp
+  /var/lib/popularity-contest/ rw,
+  /var/lib/popularity-contest/lastsub rw,
+
+  owner /tmp/tmp.*/ rw,
+  owner /tmp/tmp.*/random_seed w,
+
+  # file_inherit
+  owner /tmp/#@{int} rw,
+
+
+  profile savelog {
+    include <abstractions/base>
+
+    @{bin}/savelog mr,
+
+    @{bin}/date       rix,
+    @{bin}/basename   rix,
+    @{bin}/which{,.debianutils}      rix,
+    @{bin}/dirname    rix,
+    @{bin}/rm         rix,
+    @{bin}/mv         rix,
+    @{bin}/touch      rix,
+    @{bin}/gzip       rix,
+
+    @{sh_path}        rix,
+
+    /var/log/ r,
+    /var/log/popularity-contest.@{int}.gz rw,
+    /var/log/popularity-contest.@{int} rw,
+    /var/log/popularity-contest rw,
+
+    # file_inherit
+    owner /tmp/#@{int} rw,
+
+  }
+
+  profile runuser {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/nameservice-strict>
+    include <abstractions/authentication>
+
+    @{bin}/runuser mr,
+
+    @{sh_path}                 rix,
+
+    @{bin}/popularity-contest rPx,
+
+    owner @{PROC}/@{pids}/loginuid r,
+          @{PROC}/1/limits r,
+
+    @{etc_ro}/security/limits.d/ r,
+
+    /var/log/popularity-contest.new w,
+
+    # file_inherit
+    owner /tmp/#@{int} rw,
+
+  }
+
+  profile gpg {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    @{bin}/gpg{,2} mr,
+
+    /usr/share/popularity-contest/debian-popcon.gpg r,
+
+    /var/log/popularity-contest.new r,
+    /var/log/popularity-contest.new.gpg rw,
+    /var/log/popularity-contest.@{int} r,
+    /var/log/popularity-contest.@{int}.gpg rw,
+
+    owner /tmp/tmp.*/** rwkl -> /tmp/tmp.*/**,
+
+    # file_inherit
+    owner /tmp/#@{int} rw,
+
+  }
+
+  profile popcon-upload {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+    include <abstractions/perl>
+
+    network inet dgram,
+    network inet6 dgram,
+    network inet stream,
+    network inet6 stream,
+    network netlink raw,
+
+    /usr/share/popularity-contest/popcon-upload r,
+    @{bin}/perl r,
+
+    @{bin}/gzip rix,
+
+    /var/log/ r,
+    /var/log/popularity-contest.new.gpg r,
+    /var/log/popularity-contest.@{int}.gpg r,
+
+    # file_inherit
+    owner /tmp/#@{int} rw,
+
+  }
+
+  include if exists <local/cron-popularity-contest>
+}

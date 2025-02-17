@@ -1,0 +1,148 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2015-2020 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gajim
+profile gajim @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+  include <abstractions/X>
+  include <abstractions/gtk>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/freedesktop.org>
+  include <abstractions/audio>
+  include <abstractions/video>
+  include <abstractions/dri-enumerate>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/user-download-strict>
+  include <abstractions/python>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+  include <abstractions/gstreamer>
+  include <abstractions/enchant>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} r,
+
+  @{bin}/           r,
+  @{sh_path}        rix,
+  @{bin}/ldconfig   rix,
+  @{bin}/uname      rix,
+
+  # To play sounds
+  @{bin}/aplay      rix,
+  @{bin}/pacat      rix,
+
+  # Needed for GPG/PGP support
+  @{bin}/gpg{,2}    rCx -> gpg,
+  @{bin}/gpgconf    rCx -> gpg,
+  @{bin}/gpgsm      rCx -> gpg,
+
+  @{bin}/ccache                 rCx -> ccache,
+  @{bin}/{,@{multiarch}-}ld.bfd rCx -> ccache,
+
+  # External apps
+  @{bin}/xdg-settings    rPx,
+  @{lib}/firefox/firefox rPx,
+  @{bin}/spacefm         rPx,
+
+  # Gajim plugins
+  /usr/share/gajim/plugins/{,**} r,
+
+  # Gajim home files
+  owner @{HOME}/ r,
+  owner @{user_config_dirs}/gajim/ rw,
+  owner @{user_config_dirs}/gajim/** rwk,
+  owner @{user_share_dirs}/gajim/ rw,
+  owner @{user_share_dirs}/gajim/** rwk,
+
+  # Cache
+  owner @{user_cache_dirs}/ rw,
+  owner @{user_cache_dirs}/gajim/ rw,
+  owner @{user_cache_dirs}/gajim/** rwk,
+
+  owner @{user_cache_dirs}/farstream/ rw,
+  owner @{user_cache_dirs}/farstream/codecs.audio.x86_64.cache{,.tmp@{rand6}} rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  /etc/fstab r,
+
+  /usr/share/xml/iso-codes/{,**} r,
+
+  # TMP files locations (first in /tmp/ , /var/tmp/ and @{HOME}/)
+    /var/tmp/ r,
+        /tmp/ r,
+  owner /tmp/* rw,
+
+  # Silencer
+  deny /usr/share/gajim/** w,
+  deny /usr/lib/python3/dist-packages/** w,
+
+  profile ccache {
+    include <abstractions/base>
+    include <abstractions/consoles>
+
+    @{bin}/ccache mr,
+
+    @{lib}/llvm-[0-9]*/bin/clang      rix,
+    @{bin}/{,@{multiarch}-}gcc-[0-9]* rix,
+    @{bin}/{,@{multiarch}-}g++-[0-9]* rix,
+    @{bin}/{,@{multiarch}-}ld.bfd     rix,
+    @{lib}/gcc/@{multiarch}/@{int}/collect2 rix,
+
+    owner /tmp/cc* rw,
+    owner /tmp/tmp* rw,
+
+    /media/ccache/*/** rw,
+
+    owner @{run}/user/@{uid}/ccache-tmp/ rw,
+
+    /etc/debian_version r,
+
+  }
+
+  profile gpg {
+    include <abstractions/base>
+
+    @{bin}/gpg{,2} mr,
+    @{bin}/gpgconf mr,
+    @{bin}/gpgsm   mr,
+
+    @{bin}/gpg-agent         rix,
+    @{lib}/{,gnupg/}scdaemon rix,
+
+    owner @{run}/user/@{uid}/gnupg/d.*/ rw,
+    owner @{run}/user/@{uid}/gnupg/d.*/S.gpg-agent{,.extra,.browser,.ssh} w,
+
+    owner @{HOME}/@{XDG_GPG_DIR}/ rw,
+    owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+    owner @{user_share_dirs}/gajim/openpgp/ rw,
+    owner @{user_share_dirs}/gajim/openpgp/** rwkl -> @{user_share_dirs}/gajim/openpgp/**,
+
+    # "Without owner
+    @{PROC}/@{pid}/fd/ r,
+    @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+  }
+
+  include if exists <local/gajim>
+}

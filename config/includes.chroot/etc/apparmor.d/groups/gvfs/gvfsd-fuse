@@ -1,0 +1,67 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gvfs/}gvfsd-fuse
+profile gvfsd-fuse @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+
+  mount fstype={fuse,fuse.*} -> @{run}/user/@{uid}/gvfs/,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  unix (send,receive) type=stream addr=none peer=(label=gvfsd-fuse//fusermount),
+
+  dbus send bus=session path=/org/gtk/vfs/mounttracker
+       interface=org.gtk.vfs.MountTracker
+       member=RegisterFuse
+       peer=(name=:*, label=gvfsd),
+
+  dbus receive bus=session path=/
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  @{bin}/fusermount{,3} rCx -> fusermount,
+
+  @{PROC}/sys/fs/pipe-max-size r,
+
+  /dev/fuse rw,
+
+  profile fusermount {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    capability dac_read_search,
+    capability sys_admin,  # To mount anything
+
+    mount fstype={fuse,fuse.*} -> @{run}/user/@{uid}/gvfs/,
+    umount @{run}/user/@{uid}/**/,
+
+    signal (receive) set=(cont, term) peer=systemd-user,
+
+    unix (send,receive) type=stream addr=none peer=(label=gvfsd-fuse),
+
+    @{bin}/fusermount{,3} mr,
+
+    /etc/fuse{,3}.conf r,
+    /etc/machine-id r,
+
+    @{PROC}/@{pid}/mounts r,
+
+    /dev/fuse rw,
+
+    include if exists <local/gvfsd-fuse_fusermount>
+  }
+
+  include if exists <local/gvfsd-fuse>
+}

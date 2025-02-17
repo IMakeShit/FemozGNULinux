@@ -1,0 +1,64 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gvfs/}gvfsd-trash
+profile gvfsd-trash @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/freedesktop.org>
+  include <abstractions/nameservice-strict>
+  include <abstractions/trash>
+
+  # When mounting a SMB share
+  network inet stream,
+  network inet6 stream,
+
+  dbus bind bus=session name=org.gtk.vfs.mountpoint_@{int},
+
+  dbus receive bus=session path=/org/gtk/vfs/Daemon
+       interface=org.gtk.vfs.Daemon
+       member=GetConnection
+       peer=(name=:*, label=gnome-shell),
+
+  dbus receive bus=session path=/org/gtk/vfs/mountable
+       interface=org.gtk.vfs.Mountable
+       member=Mount
+       peer=(name=:*, label=gvfsd),
+
+  dbus send bus=session path=/org/gtk/gvfs/exec_spaw/@{int}
+       interface=org.gtk.vfs.Spawner
+       member=Spawned
+       peer=(name=:*, label=gvfsd),
+
+  dbus send bus=session path=/org/gtk/vfs/mounttracker
+       interface=org.gtk.vfs.MountTracker
+       member=RegisterMount
+       peer=(name=:*, label=gvfsd),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  # Can restore all user files
+  owner @{HOME}/{,**} rw,
+  owner @{MOUNTS}/{,**} rw,
+
+  owner @{run}/user/@{uid}/gvfsd/ rw,
+  owner @{run}/user/@{uid}/gvfsd/socket-@{rand8} rw,
+
+  @{run}/mount/utab r,
+
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  include if exists <local/gvfsd-trash>
+}

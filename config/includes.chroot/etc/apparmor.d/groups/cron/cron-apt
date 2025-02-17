@@ -1,0 +1,90 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/cron-apt
+profile cron-apt @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  # Needed?
+  capability setgid,
+
+  @{exec_path} r,
+
+  @{sh_path}         rix,
+  @{bin}/dotlockfile rix,
+  @{bin}/sed         rix,
+  @{bin}/mktemp      rix,
+  @{bin}/diff        rix,
+  @{bin}/mkdir       rix,
+  @{bin}/rmdir       rix,
+  @{bin}/rm          rix,
+  @{bin}/{,e}grep    rix,
+  @{bin}/md5sum      rix,
+  @{bin}/stat        rix,
+  @{bin}/date        rix,
+  @{bin}/cat         rix,
+  @{bin}/expr        rix,
+  @{bin}/cp          rix,
+  @{bin}/dd          rix,
+  @{bin}/cksum       rix,
+  @{bin}/{m,g,}awk   rix,
+  @{bin}/sleep       rix,
+  @{bin}/mv          rix,
+  @{bin}/logger      rix,
+  @{bin}/ls          rix,
+  @{bin}/touch       rix,
+  @{bin}/uname       rix,
+  @{bin}/fold        rix,
+
+  @{bin}/apt-get     rPx,
+  @{bin}/apt-file    rPx,
+  @{bin}/aptitude{,-curses} rPx,
+  @{bin}/exim4      rPx,
+
+  /usr/share/cron-apt/{,*} r,
+
+  /etc/cron-apt/{,*/} r,
+  /etc/cron-apt/config r,
+  /etc/cron-apt/refrain r,
+  /etc/cron-apt/action.d/[0-9]-* r,
+
+  # For shell pwd
+  / r,
+  /etc/ r,
+  /root/ r,
+
+  /var/lib/cron-apt/ rw,
+  /var/lib/cron-apt/** rwl -> /var/lib/cron-apt/**,
+
+  # Logs
+  /var/log/cron-apt/ r,
+  /var/log/cron-apt/error w,
+  /var/log/cron-apt/temp rw,
+  /var/log/cron-apt/mail rw,
+  /var/log/cron-apt/lastfullmessage rw,
+
+  # For the "ls" command
+  @{lib}/locale/locale-archive r,
+
+  # TMP
+        /tmp/ r,
+  owner /tmp/cron-apt.*/ rw,
+  owner /tmp/cron-apt.*/difftemp rw,
+  owner /tmp/cron-apt.*/lockfile rw,
+  owner /tmp/cron-apt.*/initlog rw,
+  owner /tmp/cron-apt.*/status rw,
+  owner /tmp/cron-apt.*/run{log,error,mail,syslog} rw,
+  owner /tmp/cron-apt.*/action{log,error,mail,syslog} rw,
+
+  # file_inherit
+  owner /tmp/#@{int} rw,
+
+  include if exists <local/cron-apt>
+}

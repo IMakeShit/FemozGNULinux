@@ -1,0 +1,43 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-timedated
+profile systemd-timedated @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/systemd-common>
+
+  capability sys_time,
+
+  unix (bind) type=stream addr=@@{hex}/bus/systemd-timedat/system,
+
+  # dbus: own bus=system name=org.freedesktop.timedate1
+
+  dbus send bus=system path=/org/freedesktop/systemd1/unit/*
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=org.freedesktop.systemd1, label="@{systemd}"),
+
+  @{exec_path} mr,
+
+  @{etc_rw}/.#adjtime* rw,
+  @{etc_rw}/adjtime rw,
+
+  /etc/.#localtime* rw,
+  /etc/localtime rw,
+
+  /etc/.#timezone* rw,
+  /etc/timezone rw,
+
+  @{run}/systemd/notify rw,
+
+  /dev/rtc@{int} r,
+
+  include if exists <local/systemd-timedated>
+}

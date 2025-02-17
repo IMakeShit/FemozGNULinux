@@ -1,0 +1,242 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/run-parts
+profile run-parts @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} mr,
+  
+  @{sh_path}         rix,
+  @{bin}/anacron     rix,
+  @{bin}/cat         rix,
+  @{bin}/date        rix,
+  @{bin}/nice        rix,
+  @{bin}/snapper     rix,
+
+  /usr/share/update-notifier/notify-reboot-required   rPx,
+  /usr/share/update-notifier/notify-updates-outdated  rPx,
+
+  /etc/ r,
+  /etc/anacrontab                                      r,
+  /etc/conf.d/snapper{,**}                             r,
+  /etc/snapper/configs/root                            r,
+    
+
+  # Crontab
+  /etc/cron.{hourly,daily,weekly,monthly}/                     r,
+  /etc/cron.{hourly,daily,weekly,monthly}/0anacron             rix,
+  /etc/cron.{hourly,daily,weekly,monthly}/apport               rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/apt-compat           rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/apt-listbugs         rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/apt-show-versions    rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/apt-xapian-index     rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/aptitude             rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/bsdmainutils        rPUx,
+  /etc/cron.{hourly,daily,weekly,monthly}/checksecurity       rPUx,
+  /etc/cron.{hourly,daily,weekly,monthly}/cracklib-runtime     rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/debsums              rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/debtags              rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/dlocate              rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/dpkg                rPUx,
+  /etc/cron.{hourly,daily,weekly,monthly}/etckeeper            rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/exim4-base           rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/logrotate            rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/man-db               rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/mlocate              rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/passwd              rPUx,
+  /etc/cron.{hourly,daily,weekly,monthly}/plocate              rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/popularity-contest   rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/spamassassin        rPUx,
+  /etc/cron.{hourly,daily,weekly,monthly}/sysstat              rPx,
+  /etc/cron.{hourly,daily,weekly,monthly}/tor                 rPUx,
+  /etc/cron.{hourly,daily,weekly,monthly}/vrms                rPUx,
+  /var/spool/anacron/cron.{hourly,daily,weekly,monthly}       rw,
+
+  # Network
+  /etc/network/if-down.d/ r,
+  /etc/network/if-down.d/openvpn             rPUx,
+  /etc/network/if-down.d/resolvconf          rPUx,
+  /etc/network/if-down.d/wpasupplicant       rPUx,
+
+  /etc/hostapd/ifupdown.sh                   rPUx,
+  /etc/macchanger/ifupdown.sh                rPUx,
+  /etc/wpa_supplicant/ifupdown.sh            rPUx,
+
+  /etc/network/if-post-down.d/ r,
+  /etc/network/if-post-down.d/bridge         rPUx,
+  /etc/network/if-post-down.d/chrony         rPUx,
+  /etc/network/if-post-down.d/hostapd        rPUx,
+  /etc/network/if-post-down.d/ifenslave      rPUx,
+  /etc/network/if-post-down.d/macchanger     rPUx,
+  /etc/network/if-post-down.d/wireless-tools rPUx,
+  /etc/network/if-post-down.d/wpasupplicant  rPUx,
+
+  /etc/network/if-pre-up.d/ r,
+  /etc/network/if-pre-up.d/bridge            rPUx,
+  /etc/network/if-pre-up.d/ethtool           rPUx,
+  /etc/network/if-pre-up.d/hostapd           rPUx,
+  /etc/network/if-pre-up.d/ifenslave         rPUx,
+  /etc/network/if-pre-up.d/macchanger        rPUx,
+  /etc/network/if-pre-up.d/random-secret     rPUx,
+  /etc/network/if-pre-up.d/wireless-tools    rPUx,
+  /etc/network/if-pre-up.d/wpasupplicant     rPUx,
+
+  /etc/network/if-up.d/ r,
+  /etc/network/if-up.d/*resolvconf           rPUx,
+  /etc/network/if-up.d/avahi-autoipd         rPUx,
+  /etc/network/if-up.d/chrony                rPUx,
+  /etc/network/if-up.d/ethtool               rPUx,
+  /etc/network/if-up.d/ifenslave             rPUx,
+  /etc/network/if-up.d/openvpn               rPUx,
+  /etc/network/if-up.d/postfix               rPUx,
+  /etc/network/if-up.d/ubuntu-fan             rPx,
+  /etc/network/if-up.d/wpasupplicant         rPUx,
+
+  # Motd
+  /etc/update-motd.d/ r,
+  /etc/update-motd.d/* rCx -> motd,
+
+  # Kernel 
+  /etc/kernel/header_postinst.d/ r,
+  /etc/kernel/header_postinst.d/dkms          rCx -> kernel,
+
+  /etc/kernel/postinst.d/ r,
+  /etc/kernel/postinst.d/apt-auto-removal     rCx -> kernel,
+  /etc/kernel/postinst.d/dkms                 rCx -> kernel,
+  /etc/kernel/postinst.d/initramfs-tools      rCx -> kernel,
+  /etc/kernel/postinst.d/unattended-upgrades  rCx -> kernel,
+  /etc/kernel/postinst.d/zz-update-grub       rCx -> kernel,
+  /etc/kernel/postinst.d/zz-shim              rCx -> kernel,
+  /etc/kernel/postinst.d/xx-update-initrd-links rCx -> kernel,
+
+  /etc/kernel/postrm.d/ r,
+  /etc/kernel/postrm.d/initramfs-tools        rCx -> kernel,
+  /etc/kernel/postrm.d/zz-update-grub         rCx -> kernel,
+
+  /etc/kernel/preinst.d/ r,
+  /etc/kernel/preinst.d/intel-microcode       rCx -> kernel,
+
+  /etc/kernel/prerm.d/ r,
+  /etc/kernel/prerm.d/dkms                    rCx -> kernel,
+
+  /usr/share/finalrd/ r,
+  /usr/share/finalrd/mdadm.finalrd rPUx,
+  /usr/share/finalrd/open-iscsi.finalrd rPUx,
+
+  /usr/share/landscape/landscape-sysinfo.wrapper rPUx,
+
+  owner /tmp/#@{int} rw,
+  owner /tmp/$anacron* rw,
+  owner /tmp/file@{rand6} ra,
+  
+  owner @{sys}/class/power_supply/            r,
+
+  /dev/tty@{int} rw,
+
+  profile motd {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    @{sh_path}        rix,
+    @{bin}/{e,}grep   rix,
+    @{bin}/cat        rix,
+    @{bin}/cut        rix,
+    @{bin}/find       rix,
+    @{bin}/head       rix,
+    @{bin}/id         rix,
+    @{bin}/sort       rix,
+    @{bin}/tr         rix,
+    @{bin}/uname      rix,
+  
+    @{bin}/snap                                                   rPUx,
+    @{lib}/ubuntu-release-upgrader/release-upgrade-motd            rPx,
+    @{lib}/update-notifier/update-motd-fsck-at-reboot              rPx,
+    @{lib}/update-notifier/update-motd-reboot-required             rix,
+    /usr/share/unattended-upgrades/update-motd-unattended-upgrades rix,
+    /usr/share/update-notifier/notify-updates-outdated             rPx,
+
+    / r,
+    /etc/default/motd-news r,
+    /etc/lsb-release r,
+    /etc/update-motd.d/* r,
+
+    /var/cache/motd-news rw,
+    /var/lib/update-notifier/updates-available r,
+    /var/lib/ubuntu-advantage/messages/motd-esm-announce r,
+
+    @{run}/motd.d/{,*} r,
+
+    @{PROC}/@{pids}/mounts r,
+
+    /dev/tty@{int} rw,
+  }
+
+  profile kernel {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/nameservice-strict>
+
+    capability sys_module,
+
+    @{sh_path}        rix,
+    @{bin}/{,e}grep   rix,
+    @{bin}/{,m,g}awk  rix,
+    @{bin}/cat        rix,
+    @{bin}/chmod      rix,
+    @{bin}/cut        rix,
+    @{bin}/dirname    rix,
+    @{bin}/kmod       rix,
+    @{bin}/mv         rix,
+    @{bin}/rm         rix,
+    @{bin}/rmdir      rix,
+    @{bin}/sed        rix,
+    @{bin}/sort       rix,
+    @{bin}/touch      rix,
+    @{bin}/tr         rix,
+    @{bin}/uname      rix,
+    @{bin}/which{,.debianutils}      rix,
+
+    @{bin}/apt-config               rPx,
+    @{bin}/dkms                     rPx,
+    @{bin}/dpkg                     rPx -> child-dpkg,
+    @{bin}/systemd-detect-virt      rPx,
+    @{bin}/update-alternatives      rPx,
+    @{bin}/update-grub             rPUx,
+    @{bin}/update-initramfs         rPx,
+    @{lib}/dkms/dkms_autoinstaller  rPx,
+
+    @{lib}/modules/*/updates/ w,
+    @{lib}/modules/*/updates/dkms/ w,
+
+    /etc/kernel/header_postinst.d/* r,
+    /etc/kernel/{postinst,postrm,preinst,prerm}.d/* r,
+
+    # For shell pwd
+    / r,
+    /boot/ r,
+  
+    /etc/apt/apt.conf.d/ r,
+    /etc/apt/apt.conf.d/01autoremove-kernels{,.dpkg-new} rw,
+    /etc/modprobe.d/ r,
+    /etc/modprobe.d/*.conf r,
+
+    @{run}/reboot-required w,
+    @{run}/reboot-required.pkgs rw,
+
+    @{PROC}/devices r,
+    @{PROC}/cmdline r,
+
+  }
+
+  include if exists <local/run-parts>
+}

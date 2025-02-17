@@ -1,0 +1,105 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{etc_ro}/X11/xdm/Xsession
+profile xdm-xsession @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bash>
+  include <abstractions/dconf-write>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/X-strict>
+
+  @{exec_path} mr,
+
+  @{bin}/checkproc      rix,
+  @{sh_path}                rix,
+  @{bin}/basename           rix,
+  @{bin}/cat                rix,
+  @{bin}/dirname            rix,
+  @{bin}/gpg-agent          rPx,
+  @{bin}/gpg-connect-agent  rPx,
+  @{bin}/grep               rix,
+  @{bin}/locale             rix,
+  @{bin}/manpath            rix,
+  @{bin}/readlink           rix,
+  @{bin}/sed                rix,
+  @{bin}/ssh-agent          rix,
+  @{bin}/tr                 rix,
+  @{bin}/tty                rix,
+  @{bin}/uname              rix,
+  @{bin}/whoami             rix,
+
+  @{bin}/dbus-update-activation-environment rCx -> dbus,
+  @{bin}/flatpak                            rPx,
+  @{bin}/pidof                              rPx,
+  @{bin}/startplasma-x11                    rPx,
+  @{bin}/systemctl                          rPx -> child-systemctl,
+  @{bin}/xdg-user-dirs-update               rPx,
+  @{bin}/xrdb                               rPx,
+
+  @{lib}/gnome-session-binary                rPx,
+  @{bin}/gnome                              rix,
+  @{bin}/gnome-session                      rix,
+  @{bin}/gsettings                          rPx,
+
+  @{etc_ro}/X11/xdm/sys.xsession                    rix,
+  @{etc_ro}/X11/xinit/xinitrc.d/50-systemd-user.sh  rix,
+  @{etc_ro}/X11/xinit/xinitrc.d/xdg-user-dirs.sh    rix,
+  @{HOME}/.xinitrc                                 rPix,
+  @{lib}/xinit/xinitrc                          rix,
+
+  /usr/share/bash-completion/{,**} r,
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+  /usr/share/mc/mc.sh r,
+
+  @{etc_ro}/profile.d/{,*} r,
+  @{etc_ro}/X11/xdm/scripts/{,*} r,
+  @{etc_ro}/X11/xim r,
+  @{etc_ro}/X11/xim.d/none r,
+  @{etc_ro}/X11/xinit/xinitrc.common r,
+  @{etc_ro}/X11/xinit/xinitrc.d/{,*} r,
+  /etc/debuginfod/{,*} r,
+  /etc/gcrypt/hwf.deny r,
+  /etc/locale.conf r,
+  /etc/manpath.config r,
+  /etc/shells r,
+  /etc/sysconfig/* r,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/.alias r,
+  owner @{HOME}/.i18n r,
+
+  owner @{user_share_dirs}/sddm/xorg-session.log rw,
+
+  @{run}/user/@{uid}/xauth_@{rand6} rl,
+
+  owner /tmp/ssh-*/ rw,
+  owner /tmp/ssh-*/agent.* rw,
+
+        @{PROC}/@{pids}/stat r,
+        @{PROC}/@{pids}/statm r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+        /dev/tty rw,
+  owner /dev/tty@{int} rw,
+
+  profile dbus {
+    include <abstractions/base>
+    include <abstractions/bus-session>
+
+    @{bin}/dbus-update-activation-environment mr,
+
+    owner @{user_share_dirs}/sddm/xorg-session.log rw,
+
+    include if exists <local/xdm-xsession_dbus>
+  }
+
+  include if exists <local/xdm-xsession>
+}

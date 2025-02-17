@@ -1,0 +1,92 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gvfs/}gvfs-udisks2-volume-monitor
+profile gvfs-udisks2-volume-monitor @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.UDisks2>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/devices-usb>
+  include <abstractions/disks-read>
+  include <abstractions/freedesktop.org>
+  include <abstractions/nameservice-strict>
+
+  capability sys_ptrace,
+
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (send) set=(term, kill) peer=mount,
+
+  ptrace (read),
+
+  dbus bind bus=session name=org.gtk.vfs.UDisks2VolumeMonitor,
+  dbus (send, receive) bus=session path=/org/gtk/Private/RemoteVolumeMonitor
+       interface=org.gtk.Private.RemoteVolumeMonitor
+       peer=(name="{:*,org.freedesktop.DBus}"),
+
+  dbus send bus=system path=/org/freedesktop/UDisks2/**
+       interface=org.freedesktop.UDisks2.Filesystem
+       peer=(name=:*, label=udisksd),
+  dbus receive bus=system path=/org/freedesktop/UDisks2
+       interface=org.freedesktop.DBus.ObjectManager
+       member=InterfacesRemoved
+       peer=(name=:*, label=udisksd),
+  dbus receive bus=system path=/org/freedesktop/UDisks2/**
+       interface=org.freedesktop.DBus.Properties
+       member=PropertiesChanged
+       peer=(name=:*, label=udisksd),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  @{bin}/lsof   rix,
+
+  @{bin}/mount  rPx,
+  @{bin}/umount rPx,
+
+  /var/lib/gdm{3,}/.config/dconf/user r,
+
+  / r,
+  /etc/fstab r,
+  /etc/machine-id r,
+
+  # Mount points
+  @{MOUNTS}/**/ r,
+  @{HOME}/**/ r,
+
+  @{run}/mount/utab r,
+  @{run}/systemd/inhibit/*.ref r,
+  @{run}/systemd/sessions/* r,
+
+        @{PROC}/ r,
+        @{PROC}/@{pids}/net/* r,
+        @{PROC}/@{pids}/stat r,
+        @{PROC}/1/cgroup r,
+        @{PROC}/locks r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/fdinfo/@{int} r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /dev/dri/card@{int} r,
+  /dev/input/event@{int} r,
+
+  include if exists <local/gvfs-udisks2-volume-monitor>
+}

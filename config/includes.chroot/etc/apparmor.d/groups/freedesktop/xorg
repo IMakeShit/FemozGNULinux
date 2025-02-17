@@ -1,0 +1,139 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/X
+@{exec_path} += @{bin}/Xorg{,.bin}
+@{exec_path} += @{lib}/Xorg{,.wrap}
+@{exec_path} += @{lib}/xorg/Xorg{,.wrap}
+profile xorg @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.login1.Session>
+  include <abstractions/desktop>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/graphics-full>
+  include <abstractions/nameservice-strict>
+
+  capability dac_override,
+  capability dac_read_search,
+  capability ipc_owner,
+  capability net_admin,
+  capability perfmon,
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+  capability sys_rawio,
+
+  signal (send) set=(usr1),
+
+  signal (receive) peer=lightdm,
+  signal (receive) peer=sddm,
+  signal (receive) peer=xinit,
+  signal (receive) set=hup peer=gdm-session-worker,
+  signal (receive) set=term peer=gdm{,-x-session},
+
+  unix (bind, listen)          type=stream addr=@/tmp/.X11-unix/*,
+  unix (send, receive, accept) type=stream addr=@/tmp/.X11-unix/*, # all peers
+
+  network netlink raw,
+
+  @{exec_path} mrix,
+
+  @{sh_path}        rix,
+  @{bin}/xkbcomp    rPx,
+  @{bin}/pkexec     rPx,
+
+  @{lib}/xorg/ r,
+  @{lib}/xorg/modules/ r,
+  @{lib}/xorg/modules/** mr,
+
+  /var/lib/xkb/server-@{int}.xkm rw,
+  /var/lib/xkb/compiled/server-@{int}.xkm rw,
+
+  /usr/share/egl/{,**} rw,
+  /usr/share/libinput*/ r,
+  /usr/share/libinput*/{,**/}[0-9][0-9]-*.quirks r,
+  /usr/share/libinput*/libinput/ r,
+
+  /etc/X11/{,**} r,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/.xsession-errors w,
+
+  owner @{user_share_dirs}/xorg/ rw,
+  owner @{user_share_dirs}/xorg/Xorg.@{int}.log{,.old} rw,
+  owner @{user_share_dirs}/xorg/Xorg.pid-@{pid}.log{,.old} rw,
+
+  owner /var/log/lightdm/x-*.log* rw,
+  owner /var/log/Xorg.@{int}.log{,.old} rw,
+  owner /var/log/Xorg.pid-@{pid}.log{,.old} rw,
+
+  /var/lib/gdm{3,}/.local/share/xorg/ rw,
+  /var/lib/gdm{3,}/.local/share/xorg/Xorg.@{int}.log{,.old} rw,
+  /var/lib/gdm{3,}/.local/share/xorg/Xorg.pid-@{pid}.log{,.old} rw,
+  /var/lib/gdm{3,}/.cache/mesa_shader_cache/index rw,
+
+  @{run}/nvidia-xdriver-* rw,
+  @{run}/sddm/{,**} rw,
+  @{run}/lightdm/{,**} rw,
+
+        /tmp/ r,
+        /tmp/server-@{int}.xkm rw,
+  owner /tmp/.tX@{int}-lock rwk,
+  owner /tmp/.X@{int}-lock rwkl -> /tmp/.tX@{int}-lock,
+  owner /tmp/server-* rwk,
+  owner /tmp/serverauth.* r,
+
+  @{sys}/bus/ r,
+  @{sys}/bus/pci/devices/ r,
+  @{sys}/class/ r,
+  @{sys}/class/{tty,input,drm}/ r,
+  @{sys}/class/power_supply/ r,
+  @{sys}/devices/**/{uevent,name,id,config} r,
+  @{sys}/devices/**/hid r,
+  @{sys}/devices/**/power_supply/**/{type,online} r,
+  @{sys}/devices/@{pci}/ r,
+  @{sys}/devices/@{pci}/backlight/*/{,max_}brightness r,
+  @{sys}/devices/@{pci}/backlight/*/brightness rw,
+  @{sys}/devices/@{pci}/boot_vga r,
+  @{sys}/devices/platform/ r,
+  @{sys}/module/i915/{,**} r,
+
+  @{run}/udev/data/+acpi:* r,             # for acpi
+  @{run}/udev/data/+dmi* r,               # for ?
+  @{run}/udev/data/+drm:card@{int}-* r,   # For screen outputs
+  @{run}/udev/data/+hid:* r,              # for HID-Compliant Keyboard
+  @{run}/udev/data/+i2c:* r,
+  @{run}/udev/data/+input:input@{int} r,  # for mouse, keyboard, touchpad
+  @{run}/udev/data/+pci:* r,              # for VGA compatible controller
+  @{run}/udev/data/+platform:* r,         # for ?
+  @{run}/udev/data/+serio:* r,            # for touchpad?
+  @{run}/udev/data/+usb* r,               # for USB mouse and keyboard
+  @{run}/udev/data/c4:@{int}   r,         # for /dev/tty[0-9]*
+  @{run}/udev/data/c5:@{int}   r,         # for /dev/tty, /dev/console, /dev/ptmx
+  @{run}/udev/data/c10:@{int} r,          # for non-serial mice, misc features
+  @{run}/udev/data/c13:@{int}  r,         # for /dev/input/*
+  @{run}/udev/data/c189:@{int} r,         # for /dev/bus/usb/**
+  @{run}/udev/data/c226:@{int} r,         # for /dev/dri/card*
+
+  @{PROC}/@{pids}/cmdline r,
+  @{PROC}/cmdline r,
+  @{PROC}/ioports r,
+  @{PROC}/mtrr rw,
+
+  /dev/fb[0-9] rw,
+  /dev/input/event@{int} rw,
+  /dev/shm/#@{int} rw,
+  /dev/shm/shmfd-* rw,
+  /dev/tty rw,
+  /dev/tty@{int} rw,
+  /dev/vga_arbiter rw,  # Graphic card modules
+
+  include if exists <local/xorg>
+}

@@ -1,0 +1,26 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gtk-query-immodules-{2,3}.0
+profile gtk-query-immodules @{exec_path} {
+  include <abstractions/base>
+
+  capability dac_override,
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{lib}/gtk-{2,3,4}.0/**/immodules.cache w,
+  @{lib}/gtk-{2,3,4}.0/**/immodules.cache.[0-9A-Z]* w,
+
+  # Inherit silencer
+  deny network inet6 stream,
+  deny network inet stream,
+
+  include if exists <local/gtk-query-immodules>
+}

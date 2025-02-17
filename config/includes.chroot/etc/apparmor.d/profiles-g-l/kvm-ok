@@ -1,0 +1,48 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/kvm-ok
+profile kvm-ok @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/uname      rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/id         rix,
+
+  @{bin}/kmod       rCx -> kmod,
+
+  @{bin}/rdmsr     rPx,
+
+  #/proc/cpuinfo r,
+  #/dev/kvm r,
+  #/dev/cpu/@{int}/msr r,
+
+  # For shell pwd
+  /root/ r,
+
+
+  profile kmod {
+    include <abstractions/base>
+
+    @{bin}/kmod mr,
+
+    /etc/modprobe.d/ r,
+    /etc/modprobe.d/*.conf r,
+    @{lib}/modprobe.d/ r,
+    @{lib}/modprobe.d/*.conf r,
+
+    @{PROC}/cmdline r,
+
+  }
+
+  include if exists <local/kvm-ok>
+}

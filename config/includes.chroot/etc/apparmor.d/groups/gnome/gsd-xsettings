@@ -1,0 +1,90 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/gsd-xsettings
+profile gsd-xsettings @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.Accounts>
+  include <abstractions/bus/org.gnome.Mutter.DisplayConfig>
+  include <abstractions/bus/org.gnome.SessionManager>
+  include <abstractions/bus/org.gnome.Shell.Introspect>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  # dbus: own bus=session name=org.gnome.SettingsDaemon.XSettings
+  # dbus: own bus=session name=org.gtk.Settings
+
+  dbus send bus=system path=/org/freedesktop/Accounts/User@{uid}
+       interface=org.freedesktop.Accounts.User
+       member=SetInputSources
+       peer=(name=:*, label=accounts-daemon),
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member=GetId
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  @{exec_path} mr,
+
+  @{bin}/cat                   rix,
+  @{bin}/which{,.debianutils}  rix,
+
+  @{bin}/busctl         rPx,
+  @{bin}/pactl          rPx,
+  @{bin}/run-parts      rCx -> run-parts,
+  @{bin}/xprop          rPx,
+  @{bin}/xrdb           rPx,
+  @{lib}/{,ibus/}ibus-x11 rPx,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/gdm/greeter-dconf-defaults r,
+
+  /etc/X11/Xsession.options r,
+  @{etc_ro}/xdg/Xwayland-session.d/ r,
+  @{etc_ro}/xdg/Xwayland-session.d/* rix,
+
+  /var/lib/gdm{3,}/.cache/fontconfig/[a-f0-9]*.cache-?{,.NEW,.LCK,.TMP-*} rw,
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm3/greeter-dconf-defaults r,
+
+  @{run}/systemd/sessions/* r,
+  @{run}/systemd/users/@{uid} r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /dev/tty rw,
+  /dev/tty@{int} rw,
+
+  profile run-parts {
+    include <abstractions/base>
+
+    @{bin}/run-parts mr,
+
+    /etc/X11/Xresources/ r,
+
+    include if exists <local/gsd-xsettings_run-parts>
+  }
+
+  include if exists <local/gsd-xsettings>
+}

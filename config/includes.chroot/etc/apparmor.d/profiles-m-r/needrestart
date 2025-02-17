@@ -1,0 +1,85 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/needrestart
+profile needrestart @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/perl>
+  include <abstractions/python>
+  include <abstractions/wutmp>
+
+  capability checkpoint_restore,
+  capability dac_read_search,
+  capability kill,
+  capability sys_ptrace,
+
+  ptrace (read),
+
+  @{exec_path} mrix,
+
+  @{sh_path}                               rix,
+  @{bin}/dpkg-query                        rpx,
+  @{bin}/fail2ban-server                   rPx,
+  @{bin}/locale                            rix,
+  @{bin}/python3.@{int}                    rix,
+  @{bin}/sed                               rix,
+  @{bin}/stty                              rix,
+  @{bin}/systemctl                         rCx -> systemctl,
+  @{bin}/systemd-detect-virt               rPx,
+  @{bin}/udevadm                           rPx,
+  @{bin}/unix_chkpwd                       rPx,
+  @{bin}/whiptail                          rPx,
+  @{bin}/who                               rix,
+  @{lib}/needrestart/iucode-scan-versions  rPx,
+  /usr/share/debconf/frontend              rix,
+
+  @{bin}/networkd-dispatcher r,
+  @{bin}/gettext.sh r,
+  /usr/share/needrestart/{,**} r,
+  /usr/share/unattended-upgrades/unattended-upgrade-shutdown r,
+
+  /etc/debconf.conf r,
+  /etc/init.d/* r,
+  /etc/needrestart/{,**} r,
+  /etc/needrestart/*.d/* rix,
+  /etc/shadow r,
+
+  / r,
+  /boot/ r,
+  /boot/intel-ucode.img r,
+  /boot/vmlinuz* r,
+
+  owner /var/lib/juju/agents/{,**} r,
+  owner /var/cache/debconf/{config,passwords,templates}.dat{,-new,-old} rwk,
+
+  owner @{run}/sshd.pid r,
+
+        @{PROC}/ r,
+        @{PROC}/@{pids}/cgroup r,
+        @{PROC}/@{pids}/cmdline r,
+        @{PROC}/@{pids}/environ r,
+        @{PROC}/@{pids}/maps r,
+        @{PROC}/@{pids}/stat r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /dev/ r,
+  /dev/**/ r,
+
+  profile systemctl {
+    include <abstractions/base>
+    include <abstractions/systemctl>
+
+    capability net_admin,
+
+    include if exists <local/needrestart_systemctl>
+  }
+
+  include if exists <local/needrestart>
+}

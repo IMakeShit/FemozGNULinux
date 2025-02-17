@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/cron.{hourly,daily,weekly,monthly}/debsums
+profile cron-debsums @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  @{sh_path}        rix,
+  @{bin}/true       rix,
+  @{bin}/logger     rix,
+  @{bin}/sed        rix,
+  @{bin}/{,e}grep   rix,
+
+  @{bin}/ionice     rix,
+
+  @{bin}/debsums    rPx,
+  @{bin}/tee        rCx -> tee,
+
+  /etc/ r,
+  /etc/default/debsums r,
+  /etc/debsums-ignore r,
+
+  # For shell pwd
+  / r,
+
+
+  profile tee {
+    include <abstractions/base>
+    include <abstractions/consoles>
+
+    # Needed to write to /proc/self/fd/3
+    capability dac_override,
+
+    @{bin}/tee mr,
+
+    owner @{PROC}/@{pid}/fd/3 rw,
+
+  }
+
+  include if exists <local/cron-debsums>
+}

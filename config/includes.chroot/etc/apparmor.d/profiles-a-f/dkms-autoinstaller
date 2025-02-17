@@ -1,0 +1,40 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/dkms/dkms_autoinstaller
+profile dkms-autoinstaller @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} rm,
+
+  @{sh_path}        rix,
+  @{bin}/dkms       rPx,
+  @{bin}/echo       rix,
+  @{bin}/plymouth   rix,
+  @{bin}/readlink   rix,
+  @{bin}/run-parts  rCx -> run-parts,
+  @{bin}/systemctl  rPx -> child-systemctl,
+  @{bin}/tput       rix,
+
+  # For shell pwd
+  / r,
+
+  owner @{PROC}/cmdline r,
+
+  profile run-parts {
+    include <abstractions/base>
+    include <abstractions/consoles>
+
+    @{bin}/run-parts mr,
+
+  }
+
+  include if exists <local/dkms-autoinstaller>
+}

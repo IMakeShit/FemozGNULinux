@@ -1,0 +1,38 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/ring/dring
+profile dring @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/audio>
+  include <abstractions/video>
+
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  owner @{user_config_dirs}/ring/ rw,
+  owner @{user_config_dirs}/jami/dring.yml rw,
+  owner @{user_config_dirs}/jami/dring.yml.bak w,
+  owner @{user_share_dirs}/jami/ r,
+
+  @{sys}/class/ r,
+  @{sys}/bus/ r,
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node@{int}/meminfo r,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+
+  include if exists <local/dring>
+}

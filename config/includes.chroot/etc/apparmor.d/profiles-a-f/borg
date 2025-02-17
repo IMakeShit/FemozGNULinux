@@ -1,0 +1,119 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/borg
+profile borg @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/python>
+
+  capability dac_read_search,
+  capability fowner,
+  capability sys_admin,
+
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  mount fstype=fuse -> @{MOUNTS}/,
+  mount fstype=fuse -> @{MOUNTS}/*/,
+  umount @{MOUNTS}/,
+  umount @{MOUNTS}/*/,
+
+  @{exec_path} r,
+
+  @{bin}/ r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/{,@{multiarch}-}ld.bfd rix,
+  @{bin}/cat                    rix,
+  @{bin}/ldconfig               rix,
+  @{bin}/uname                  rix,
+
+  @{bin}/ccache                 rCx -> ccache,
+  @{bin}/fusermount{,3}         rCx -> fusermount,
+  @{bin}/pass                   rPx,
+  @{bin}/ssh                    rPx,
+
+  # Dirs that can be backed up
+  /            r,
+  /etc/{,**}   r,
+  /home/{,**}  r,
+  @{MOUNTS}/{,**} r,
+  /root/{,**}  r,
+  /srv/{,**}   r,
+  /var/{,**}   r,
+
+  # The backup dirs
+  owner @{MOUNTS}/ r,
+  owner @{MOUNTS}/** rwkl -> @{MOUNTS}/**,
+
+  owner @{user_cache_dirs}/ rw,
+  owner @{user_cache_dirs}/borg/ rw,
+  owner @{user_cache_dirs}/borg/** rw,
+
+  owner @{user_config_dirs}/borg/ rw,
+  owner @{user_config_dirs}/borg/** rw,
+
+  # If /tmp/ isn't accessible, then /var/tmp/ is used.
+  owner /tmp/* rw,
+  owner /tmp/borg-cache-*/ rw,
+  owner /tmp/borg-cache-*/* rw,
+  owner /tmp/tmp*/ rw,
+  owner /tmp/tmp*/file rw,
+  owner /tmp/tmp*/idx rw,
+  owner /var/tmp/* rw,
+  owner /var/tmp/tmp*/ rw,
+  owner /var/tmp/tmp*/file rw,
+  owner /var/tmp/tmp*/idx rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /dev/fuse rw,
+
+  profile ccache {
+    include <abstractions/base>
+
+    @{bin}/ccache mr,
+
+    @{lib}/llvm-[0-9]*/bin/clang      rix,
+    @{bin}/{,@{multiarch}-}gcc-[0-9]* rix,
+    @{bin}/{,@{multiarch}-}g++-[0-9]* rix,
+
+    /etc/debian_version r,
+
+    @{MOUNTS}/** rw,
+
+    include if exists <local/borg_ccache>
+  }
+
+  profile fusermount {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    capability sys_admin,
+
+    umount @{MOUNTS}/,
+    umount @{MOUNTS}/*/,
+
+    @{bin}/fusermount{,3} mr,
+
+    /etc/fuse.conf r,
+
+    @{PROC}/@{pids}/mounts r,
+
+    /dev/fuse rw,
+
+    include if exists <local/borg_fusermount>
+  }
+
+  include if exists <usr/borg.d>
+  include if exists <local/borg>
+}

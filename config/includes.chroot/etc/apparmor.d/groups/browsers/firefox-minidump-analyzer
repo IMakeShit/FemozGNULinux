@@ -1,0 +1,57 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{MOZ_HOMEDIR} = @{HOME}/.mozilla
+
+@{name} = firefox{,.sh,-esr,-bin}
+@{lib_dirs} = @{lib}/@{name} /opt/@{name}
+@{config_dirs} = @{HOME}/.mozilla/
+@{cache_dirs} = @{user_cache_dirs}/mozilla/
+
+@{exec_path} = @{lib_dirs}/minidump-analyzer
+profile firefox-minidump-analyzer @{exec_path} {
+  include <abstractions/base>
+
+  signal (receive) set=(term, kill) peer=firefox,
+
+  @{exec_path} mr,
+
+  owner @{HOME}/.xsession-errors w,
+
+  owner "@{config_dirs}/firefox/Crash Reports/" rw,
+  owner "@{config_dirs}/firefox/Crash Reports/pending/" rw,
+  owner "@{config_dirs}/firefox/Crash Reports/pending/@{hex}.{dmp,extra}" rw,
+  owner @{config_dirs}/*.*/extensions/*.xpi r,
+  owner @{config_dirs}/*.*/minidumps/ rw,
+  owner @{config_dirs}/*.*/minidumps/@{uuid}.{dmp,extra} rw,
+  owner @{config_dirs}/*.*/storage/default/* r,
+
+  owner @{cache_dirs}/firefox/*.*/startupCache/*Cache* r,
+
+  owner /tmp/@{hex}.{dmp,extra} rw,
+  owner /tmp/firefox/.parentlock w,
+
+  owner /dev/shm/org.mozilla.ipc.@{int}.@{int} r,
+
+  owner @{PROC}/@{pid}/task/@{tid}/stat r,
+  owner @{PROC}/@{pid}/stat r,
+
+  /dev/dri/renderD128 rw,
+
+  # Silencer
+  deny network inet dgram,
+  deny network inet6 dgram,
+  deny network inet stream,
+  deny network inet6 stream,
+  deny network netlink raw,
+  deny owner @{MOZ_HOMEDIR}/firefox/*/extensions/*.xpi r,
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/firefox-minidump-analyzer>
+}

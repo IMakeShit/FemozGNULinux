@@ -1,0 +1,51 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/nvtop
+profile nvtop @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/graphics-full>
+  include <abstractions/nameservice-strict>
+
+  capability sys_ptrace,
+
+  ptrace (read),
+
+  @{exec_path} mr,
+
+  /usr/share/terminfo/** r,
+
+  owner @{user_config_dirs}/nvtop/{,**} rw,
+
+  @{run}/systemd/inhibit/*.ref r,
+  @{run}/udev/data/+drm:card@{int}-* r,   # for screen outputs
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/c226:@{int} r,         # For /dev/dri/card*
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+  @{sys}/bus/ r,
+  @{sys}/devices/@{pci}/enable r,
+  @{sys}/devices/system/node/node@{int}/cpumap r,
+
+  @{PROC}/ r,
+  @{PROC}/@{pids}/ r,
+  @{PROC}/@{pids}/cmdline r,
+  @{PROC}/@{pids}/fd/ r,
+  @{PROC}/@{pids}/fdinfo/ r,
+  @{PROC}/@{pids}/fdinfo/@{int} r,
+  @{PROC}/@{pids}/stat r,
+  @{PROC}/devices r,
+  @{PROC}/driver/nvidia/capabilities/mig/{config,monitor}  r,
+
+  /dev/dri/ r,
+  /dev/nvidia-caps/ rw,
+  /dev/nvidia-caps/nvidia-cap@{int} rw,
+
+  include if exists <local/nvtop>
+}

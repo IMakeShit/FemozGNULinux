@@ -1,0 +1,45 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xdg-icon-resource
+profile xdg-icon-resource @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} r,
+
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/whoami     rix,
+  @{bin}/sed        rix,
+  @{bin}/basename   rix,
+  @{bin}/mkdir      rix,
+  @{bin}/cp         rix,
+  @{bin}/rm         rix,
+  @{bin}/readlink   rix,
+  @{bin}/touch      rix,
+
+  @{bin}/gtk{,4}-update-icon-cache rPx,
+
+  /usr/share/**/icons/**.png r,
+  /usr/share/icons/**.png rw,
+  /usr/share/icons/*/.xdg-icon-resource-dummy rw,
+  /usr/share/terminfo/** r,
+
+  owner /tmp/.com.google.Chrome.*/chrome-*.png r,
+
+  owner @{user_share_dirs}/icons/**/apps/chrome-*.png rw,
+  owner @{user_share_dirs}/icons/**/.xdg-icon-resource-dummy rw,
+  /opt/**/*.png r,
+
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/xdg-icon-resource>
+}

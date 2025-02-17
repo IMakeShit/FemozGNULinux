@@ -1,0 +1,7 @@
+Package: tor
+Pin: origin packages.devuan.org
+Pin-Priority: 1001
+
+Package: tor
+Pin: release a=*
+Pin-Priority: -1

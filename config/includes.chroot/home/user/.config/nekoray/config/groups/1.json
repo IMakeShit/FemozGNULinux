@@ -1,0 +1,22 @@
+{
+    "archive": false,
+    "column_width": [
+    ],
+    "front_proxy_id": -1,
+    "id": 1,
+    "lastup": 1737028285,
+    "manually_column_width": false,
+    "name": "IMakeShit_VlessReality",
+    "order": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+    ],
+    "skip_auto_update": false,
+    "url": "https://github.com/IMakeShit/SSPublicSubList/raw/refs/heads/main/vless_reality_servers.txt"
+}

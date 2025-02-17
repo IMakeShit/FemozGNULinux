@@ -1,0 +1,89 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,evolution-data-server/}evolution-calendar-factory
+profile evolution-calendar-factory @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/nameservice-strict>
+  include <abstractions/p11-kit>
+  include <abstractions/ssl_certs>
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  dbus bind bus=session name=org.gnome.evolution.dataserver.Calendar@{int},
+
+  dbus (send, receive) bus=session path=/org/gnome/evolution/dataserver/**
+       interface=org.gnome.evolution.dataserver.*
+       peer=(name=:*),
+
+  dbus send bus=session path=/org/gnome/evolution/dataserver/**
+       interface=org.gnome.evolution.dataserver.*
+       peer=(name=org.freedesktop.DBus, label="{evolution-*,gnome-shell-*-server}"),
+
+  dbus (send, receive) bus=session path=/org/gnome/evolution/dataserver/**
+       interface=org.freedesktop.DBus.Properties
+       peer=(name=:*),
+
+  dbus send bus=session path=/org/gnome/evolution/dataserver/**
+       interface=org.freedesktop.DBus.Properties
+       peer=(name=org.freedesktop.DBus, label=evolution-*),
+
+  dbus send bus=session path=/org/gnome/evolution/dataserver/SourceManager
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=:*, label=evolution-source-registry),
+
+  dbus send bus=session path=/org/gnome/evolution/dataserver/**
+       interface=org.freedesktop.DBus.Properties
+       member=PropertiesChanged
+       peer=(name=org.freedesktop.DBus, label=gnome-shell-calendar-server),
+
+  dbus send bus=session path=/org/gnome/evolution/dataserver/CalendarView/**
+       interface=org.gnome.evolution.dataserver.CalendarView
+       member=Complete
+       peer=(name=org.freedesktop.DBus, label=gnome-calendar),
+
+  dbus send bus=session path=/org/gtk/vfs/metadata
+       interface=org.gtk.vfs.Metadata
+       member=Move
+       peer=(name=:*, label=gvfsd-metadata),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+  @{exec_path}-subprocess rix,
+
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+
+  owner @{user_cache_dirs}/evolution/calendar/{,**} rwk,
+  owner @{user_cache_dirs}/evolution/tasks/{,**} rwk,
+
+  owner @{user_share_dirs}/evolution/calendar/{,**} rwk,
+  owner @{user_share_dirs}/evolution/tasks/system/ w,
+  owner @{user_share_dirs}/evolution/tasks/system/tasks.ics* rw,
+  owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  @{PROC}/sys/kernel/osrelease r,
+  @{PROC}/cmdline r,
+
+  include if exists <local/evolution-calendar-factory>
+}

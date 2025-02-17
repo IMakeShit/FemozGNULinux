@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xdg-desktop-menu
+profile xdg-desktop-menu @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/consoles>
+
+  @{exec_path} r,
+
+  @{sh_path}        rix,
+  @{bin}/mkdir      rix,
+  @{bin}/sed        rix,
+  @{bin}/cut        rix,
+  @{bin}/basename   rix,
+  @{bin}/rm         rix,
+  @{bin}/cp         rix,
+  @{bin}/cat        rix,
+  @{bin}/touch      rix,
+  @{bin}/{m,g,}awk  rix,
+  @{bin}/whoami     rix,
+  @{bin}/mv         rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/readlink   rix,
+
+  @{bin}/update-desktop-database rPx,
+
+  owner @{user_config_dirs}/menus/applications-merged/xdg-desktop-menu-dummy.menu rw,
+  owner @{user_share_dirs}/applications/chrome-*.desktop rw,
+  owner @{HOME}/.gnome/apps/chrome-*.desktop rw,
+
+  /usr/share/applications/*.desktop rw,
+  /usr/share/*/*.desktop r,
+
+  /usr/share/applications/defaults.list r,
+  /usr/share/applications/defaults.list.new w,
+
+  include if exists <local/xdg-desktop-menu>
+}

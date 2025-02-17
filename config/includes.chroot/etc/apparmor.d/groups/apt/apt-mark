@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/apt-mark
+profile apt-mark @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+
+  @{exec_path} mr,
+
+  @{bin}/dpkg rPx,
+
+  /etc/machine-id r,
+
+  /var/lib/apt/extended_states{,.*} rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /var/cache/apt/ r,
+  /var/cache/apt/** rwk,
+
+  /dev/pts/@{int} rw,
+
+  include if exists <local/apt-mark>
+}

@@ -1,0 +1,54 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/akonadi_indexing_agent
+profile akonadi_indexing_agent @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+  include <abstractions/qt5>
+  include <abstractions/X-strict>
+
+  @{exec_path} mr,
+
+  @{bin}/akonadi_html_to_text rix,
+
+  /usr/share/akonadi/plugins/serializer/ r,
+  /usr/share/akonadi/plugins/serializer/*.desktop r,
+  /usr/share/hwdata/*.ids r,
+  /usr/share/icu/@{int}.@{int}/*.dat r,
+
+  /etc/machine-id r,
+  /etc/xdg/kdeglobals r,
+  /etc/xdg/kwinrc r,
+
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+
+  owner @{user_config_dirs}/#@{int} rw,
+  owner @{user_config_dirs}/akonadi_indexing_agentrc rw,
+  owner @{user_config_dirs}/akonadi_indexing_agentrc.@{rand6} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/akonadi_indexing_agentrc.lock rwk,
+  owner @{user_config_dirs}/akonadi/ rw,
+  owner @{user_config_dirs}/akonadi/** rwlk -> @{user_config_dirs}/akonadi/**,
+  owner @{user_config_dirs}/kdedefaults/kdeglobals r,
+  owner @{user_config_dirs}/kdedefaults/kwinrc r,
+  owner @{user_config_dirs}/kdeglobals r,
+  owner @{user_config_dirs}/kwinrc r,
+
+  owner @{user_share_dirs}/akonadi/ rw,
+  owner @{user_share_dirs}/akonadi/** rwlk -> @{user_share_dirs}/akonadi/**,
+
+  @{PROC}/sys/kernel/core_pattern r,
+  @{PROC}/sys/kernel/random/boot_id r,
+
+  /dev/tty r,
+
+  include if exists <local/akonadi_indexing_agent>
+}

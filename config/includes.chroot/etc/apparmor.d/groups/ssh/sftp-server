@@ -1,0 +1,26 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/openssh/sftp-server
+@{exec_path} += @{lib}/ssh/sftp-server
+profile sftp-server @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/openssl>
+  include <abstractions/nameservice-strict>
+
+  capability dac_read_search,
+  capability dac_override,
+
+  @{exec_path} mr,
+
+  # For scp
+  owner @{user_download_dirs}/{,**} rwl,
+  owner @{user_sync_dirs}/{,**} rwl,
+
+  include if exists <local/sftp-server>
+}

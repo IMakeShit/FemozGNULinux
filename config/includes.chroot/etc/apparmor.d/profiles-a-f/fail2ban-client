@@ -1,0 +1,23 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/fail2ban-client
+profile fail2ban-client @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/python>
+
+  @{exec_path} mr,
+
+  @{bin}/ r,
+  @{bin}/python3.@{int} r,
+
+  /etc/fail2ban/{,**} r,
+
+  include if exists <local/fail2ban-client>
+}

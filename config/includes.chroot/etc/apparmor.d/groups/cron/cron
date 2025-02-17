@@ -1,0 +1,80 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/cron
+profile cron @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/app-launcher-root>
+  include <abstractions/authentication>
+  include <abstractions/nameservice-strict>
+  include <abstractions/wutmp>
+
+  capability audit_write,
+  capability dac_read_search,
+  capability net_admin,
+  capability setgid,
+  capability setuid,
+  capability sys_resource,
+
+  network netlink raw,
+
+  ptrace (read) peer=unconfined,
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/nice        rix,
+  @{bin}/ionice      rix,
+  @{bin}/exim4       rPx,
+  @{bin}/run-parts   rCx -> run-parts, # could even be rix, as long as we are not
+                                       # using the  run-parts profile we are good
+
+  @{lib}/@{multiarch}/e2fsprogs/e2scrub_all_cron rPUx,
+  @{lib}/sysstat/debian-sa1       rPUx,
+  /usr/share/rsync/scripts/rrsync      rPUx,
+
+  /etc/cron.d/{,*} r,
+  /etc/crontab r,
+  /etc/default/locale r,
+  @{etc_ro}/environment r,
+  @{etc_ro}/security/limits.d/{,**} r,
+
+  /var/spool/cron/crontabs/{,*} r,
+  /var/spool/cron/tabs/{,*} r,
+
+  owner @{run}/cron.pid rwk,
+  owner @{run}/cron.reboot rw,
+  owner @{run}/crond.pid rwk,
+  owner @{run}/crond.reboot rw,
+
+  @{run}/systemd/sessions/*.ref rw,
+
+  owner /tmp/#@{int} rw,
+
+  owner @{PROC}/@{pid}/uid_map r,
+  owner @{PROC}/@{pid}/loginuid rw,
+        @{PROC}/1/limits r,
+
+  /dev/tty rw,
+
+  profile run-parts {
+    include <abstractions/base>
+
+    @{bin}/run-parts mr,
+
+    /etc/cron.*/     r,
+    /etc/cron.*/* rPUx,
+
+    owner /tmp/#@{int} rw,
+
+   include if exists <local/cron_run_parts>
+  }
+
+  include if exists <local/cron>
+}

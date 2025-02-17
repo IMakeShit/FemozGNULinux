@@ -1,0 +1,32 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/drkonqi
+profile drkonqi @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/kde-strict>
+
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  signal send set=(cont, stop) peer=/usr/bin/akonadiserver,
+
+  ptrace read peer=/usr/bin/akonadiserver,
+
+  @{exec_path} mr,
+
+  /usr/share/drkonqi/{,**} r,
+  /usr/share/knotifications5/*.notifyrc r,
+
+  owner @{user_cache_dirs}/kcrash-metadata/* w,
+
+  /dev/tty r,
+
+  include if exists <local/drkonqi>
+}

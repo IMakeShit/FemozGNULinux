@@ -1,0 +1,51 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/grub-install
+profile grub-install @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/disks-read>
+
+  capability dac_read_search,
+  capability sys_admin,
+
+  @{exec_path} mr,
+
+  @{sh_path}               rix,
+  @{bin}/efibootmgr        rix,
+  @{bin}/kmod              rPx,
+  @{bin}/lsb_release       rPx -> lsb_release,
+  @{bin}/udevadm           rPx,
+
+  /usr/share/grub/{,**} r,
+
+  /etc/default/grub.d/{,**} r,
+  /etc/default/grub r,
+
+  /boot/efi/EFI/ubuntu/* w,
+  /boot/efi/EFI/BOOT/{,**} rw,
+  /boot/EFI/*/grubx*.efi rw,
+  /boot/grub/{,**} rw,
+
+  @{sys}/firmware/efi/efivars/ r,
+  @{sys}/firmware/efi/efivars/Boot@{hex}-@{uuid} rw,
+  @{sys}/firmware/efi/efivars/BootCurrent-@{uuid} r,
+  @{sys}/firmware/efi/efivars/BootOrder-@{uuid} r,
+  @{sys}/firmware/efi/efivars/Timeout-@{uuid} r,
+  @{sys}/firmware/efi/w_platform_size r,
+
+        @{PROC}/devices r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  /dev/mapper/control rw,
+
+  include if exists <local/grub-install>
+}
+

@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/convertall /usr/share/convertall/convertall.py
+profile convertall @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/X>
+  include <abstractions/gtk>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/freedesktop.org>
+  include <abstractions/mesa>
+  include <abstractions/dri-enumerate>
+  include <abstractions/python>
+  include <abstractions/qt5-compose-cache-write>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} r,
+  @{sh_path}            rix,
+
+  @{bin}/python3.@{int} rix,
+
+  owner @{HOME}/.convertall rw,
+
+  deny owner @{PROC}/@{pid}/cmdline r,
+
+  # To configure Qt5 settings (theme, font, icons, etc.) under DE/WM without Qt integration
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+  /usr/share/qt5ct/** r,
+
+  /usr/share/convertall/{,**} r,
+  /usr/share/doc/convertall/{,*} r,
+
+  /usr/share/hwdata/pnp.ids r,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  include if exists <local/convertall>
+}

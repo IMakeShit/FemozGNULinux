@@ -1,0 +1,35 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/archlinux-java
+profile archlinux-java @{exec_path} {
+  include <abstractions/base>
+
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{bin}/basename  rix,
+  @{bin}/bash      rix,
+  @{bin}/dirname   rix,
+  @{bin}/id        rix,
+  @{bin}/ln        rix,
+  @{bin}/readlink  rix,
+  @{bin}/unlink    rix,
+
+  @{lib}/jvm/default w,
+  @{lib}/jvm/default-runtime w,
+
+  /dev/tty rw,
+
+  # Inherit Silencer
+  deny network inet6 stream,
+  deny network inet stream,
+
+  include if exists <local/archlinux-java>
+}

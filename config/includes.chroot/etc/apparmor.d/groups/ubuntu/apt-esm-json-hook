@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/ubuntu-advantage/apt-esm-json-hook
+profile apt-esm-json-hook @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/consoles>
+
+  unix (receive, send) type=stream peer=(label=apt),
+
+  @{exec_path} mr,
+
+  @{bin}/dpkg         rPx,
+
+  /var/lib/ubuntu-advantage/{,**} r,
+  /var/lib/ubuntu-advantage/apt-esm/{,**} rw,
+
+  @{sys}/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+
+  @{run}/cloud-init/cloud-id-nocloud r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/apt-esm-json-hook>
+}

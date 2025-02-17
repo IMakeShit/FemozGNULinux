@@ -1,0 +1,138 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/nautilus
+profile nautilus @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/com.canonical.Unity.LauncherEntry>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.hostname1>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/bus/org.freedesktop.Tracker3.Miner.Files>
+  include <abstractions/bus/org.gnome.SessionManager>
+  include <abstractions/bus/org.gtk.Private.RemoteVolumeMonitor>
+  include <abstractions/dconf-write>
+  include <abstractions/deny-sensitive-home>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/trash>
+
+  # userns,
+
+  # mqueue r type=posix /,
+
+  dbus bind bus=session name=org.gnome.Nautilus,
+  dbus (send, receive) bus=session path=/org/gnome/Nautilus{,/**}
+       interface={org.gnome.Nautilus,org.freedesktop.{Application,DBus.Properties},org.gtk.{Actions,Application}}
+       peer=(name="{:*,org.gnome.Nautilus,org.freedesktop.DBus}"),
+
+  # dbus: own bus=session name=org.freedesktop.FileManager1
+
+  # dbus: talk bus=session name=org.gtk.MountOperationHandler label=gnome-shell
+  # dbus: talk bus=session name=org.gtk.vfs label=gvfsd
+
+  dbus receive bus=session path=/org/gnome/Nautilus/SearchProvider
+       interface=org.gnome.Shell.SearchProvider2
+       peer=(name=:*, label=gnome-shell),
+
+  dbus receive bus=session path=/org/gnome/Nautilus/*
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-extension-ding),
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus.Properties
+       member={GetAll,ListActivatableNames}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus send bus=session path=/org/gtk/Notifications
+       interface=org.gtk.Notifications
+       member=AddNotification
+       peer=(name=org.gtk.Notifications, label=gnome-shell),
+
+  dbus (send, receive) bus=session path=/org/gtk/Application/CommandLine
+       interface=org.gtk.private.CommandLine
+       member=Print
+       peer=(name=:*, label=nautilus),
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member=ListActivatableNames
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus send bus=session path=/org/freedesktop/dbus
+       interface=org.freedesktop.DBus
+       member=NameHasOwner
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  @{exec_path} mr,
+
+  @{sh_path}                 rix,
+  @{bin}/bwrap               rPx -> gnome-desktop-thumbnailers,
+  @{bin}/file-roller         rPx,
+  @{bin}/firejail           rPUx,
+  @{bin}/net                rPUx,
+  @{bin}/tracker3           rPUx,
+
+  @{open_path}               rPx -> child-open,
+
+  /usr/share/icu/@{int}.@{int}/*.dat r,
+  /usr/share/nautilus/{,**} r,
+  /usr/share/poppler/{,**} r,
+  /usr/share/sounds/freedesktop/stereo/*.oga r,
+  /usr/share/terminfo/** r,
+  /usr/share/thumbnailers/{,**} r,
+  /usr/share/tracker*/{,**} r,
+
+  /etc/fstab r,
+
+  /var/cache/fontconfig/ rw,
+
+  # Full access to user's data
+  / r,
+  /*/ r,
+  @{bin}/ r,
+  @{lib}/ r,
+  @{MOUNTDIRS}/ r,
+  @{MOUNTS}/ r,
+  @{MOUNTS}/** rw,
+  owner @{HOME}/{,**} rw,
+  owner @{run}/user/@{uid}/{,**} rw,
+  owner /tmp/{,**} rw,
+
+  # Silence non user's data
+  deny /boot/{,**} r,
+  deny /opt/{,**} r,
+  deny /root/{,**} r,
+  deny /tmp/.* rw,
+  deny /tmp/.*/{,**} rw,
+
+  owner @{user_share_dirs}/nautilus/{,**} rwk,
+
+  @{run}/mount/utab r,
+
+  @{sys}/devices/**/hwmon@{int}/{,name,temp*,fan*} r,
+  @{sys}/devices/**/hwmon@{int}/**/{,name,temp*,fan*} r,
+  @{sys}/devices/**/hwmon/{,name,temp*,fan*} r,
+  @{sys}/devices/**/hwmon/**/{,name,temp*,fan*} r,
+
+        @{PROC}/@{pids}/net/wireless r,
+        @{PROC}/sys/dev/i915/perf_stream_paranoid r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  /dev/tty rw,
+
+  include if exists <local/nautilus>
+}

@@ -1,0 +1,23 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/aptitude-changelog-parser
+profile aptitude-changelog-parser @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/perl>
+
+  @{exec_path} r,
+  @{bin}/perl r,
+
+  /etc/dpkg/origins/debian r,
+
+  /**/debian/changelog r,
+
+  include if exists <local/aptitude-changelog-parser>
+}

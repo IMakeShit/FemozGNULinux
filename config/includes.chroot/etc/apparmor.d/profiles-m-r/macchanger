@@ -1,0 +1,28 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/macchanger
+profile macchanger @{exec_path} {
+  include <abstractions/base>
+
+  # To be able to set the MAC address:
+  #  [ERROR] Could not change MAC: interface up or insufficient permissions: Operation not permitted
+  capability net_admin,
+
+  network inet dgram,
+  network inet6 dgram,
+
+  @{exec_path} mr,
+
+  /usr/share/macchanger/*.list r,
+
+  /dev/hwrng r,
+
+  include if exists <local/macchanger>
+}

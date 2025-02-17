@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/update-alternatives
+profile update-alternatives @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  @{bin}/* w,
+  @{bin}/*.dpkg-tmp rw,
+  @{lib}/firmware/* rw,
+
+  /usr/** rw,
+
+  /etc/**.dpkg-tmp rw,
+  /etc/alternatives/* rw,
+
+  /var/lib/dpkg/alternatives/ r,
+  /var/lib/dpkg/alternatives/* rw,
+  /var/log/alternatives.log w,
+
+  owner /var/lib/alternatives/ r,
+  owner /var/lib/alternatives/* rw,
+
+  include if exists <local/update-alternatives>
+}

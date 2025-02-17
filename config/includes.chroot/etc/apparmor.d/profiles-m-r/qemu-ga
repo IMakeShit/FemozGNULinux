@@ -1,0 +1,45 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/qemu-ga
+profile qemu-ga @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+
+  capability mknod,
+  capability net_admin,
+  capability sys_ptrace,
+
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  ptrace (read) peer=@{systemd},
+
+  dbus send bus=system path=/org/freedesktop/login1
+       interface=org.freedesktop.login1.Manager
+       member={ScheduleShutdown,SetWallMessage}
+       peer=(name=org.freedesktop.login1, label=systemd-logind),
+
+  @{exec_path} mr,
+
+  @{bin}/systemctl rix,
+
+  /etc/qemu/qemu-ga.conf r,
+
+  owner @{run}/qga.state* rw,
+
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node*/meminfo r,
+
+  owner @{PROC}/@{pid}/net/dev r,
+
+  /dev/vport@{int}p@{int} rw,
+
+  include if exists <local/qemu-ga>
+}

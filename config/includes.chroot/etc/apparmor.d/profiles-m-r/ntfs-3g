@@ -1,0 +1,57 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/{low,}ntfs{,-3g}
+@{exec_path} += @{bin}/mount.{low,}ntfs{,-3g}
+profile ntfs-3g @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/disks-write>
+  include <abstractions/nameservice-strict>
+
+  capability dac_override,
+  capability dac_read_search,
+  capability mknod,
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+
+  @{exec_path} mr,
+
+  @{bin}/kmod rPx,  # To load the fuse kernel module
+
+  # Mount points
+  @{MOUNTDIRS}/ r,
+  @{MOUNTS}/ r,
+  @{MOUNTS}/*/ r,
+
+  # Allow to mount ntfs disks only under the /media/, /run/media, and /mnt/ dirs
+  mount fstype=fuseblk /dev/{s,v}d[a-z]*[0-9]* -> @{MOUNTDIRS},
+  mount fstype=fuseblk /dev/{s,v}d[a-z]*[0-9]* -> @{MOUNTS}/,
+  mount fstype=fuseblk /dev/{s,v}d[a-z]*[0-9]* -> @{MOUNTS}/*/,
+  mount fstype=fuseblk /dev/mmcblk[0-9]*p[0-9]* -> @{MOUNTS}/,
+  mount fstype=fuseblk /dev/mmcblk[0-9]*p[0-9]* -> @{MOUNTS}/*/,
+
+  # Allow to mount encrypted partition
+  mount fstype=fuseblk /dev/dm-[0-9]* -> @{MOUNTDIRS}/,
+  mount fstype=fuseblk /dev/dm-[0-9]* -> @{MOUNTS}/,
+  mount fstype=fuseblk /dev/dm-[0-9]* -> @{MOUNTS}/*/,
+
+  umount @{MOUNTDIRS}/,
+  umount @{MOUNTS}/,
+  umount @{MOUNTS}/*/,
+
+        @{PROC}/@{pids}/mountinfo r,
+        @{PROC}/@{pids}/task/@{tid}/status r,
+        @{PROC}/swaps r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /dev/fuse rw,
+
+  include if exists <local/ntfs-3g>
+}

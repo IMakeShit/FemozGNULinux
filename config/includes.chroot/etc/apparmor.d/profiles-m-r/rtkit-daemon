@@ -1,0 +1,39 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,rtkit/}rtkit-daemon
+profile rtkit-daemon @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/nameservice-strict>
+
+  capability dac_read_search,
+  capability setgid,
+  capability setuid,
+  capability sys_chroot,
+  capability sys_nice,
+  capability sys_ptrace,
+
+  # dbus: own bus=system name=org.freedesktop.RealtimeKit1
+
+  dbus send bus=system path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  @{exec_path} mr,
+
+  # When applying policies to processes
+  @{PROC}/@{pids}/stat r,
+  @{PROC}/@{pids}/task/@{tid}/stat r,
+  @{PROC}/@{pids}/limits r,
+
+  include if exists <local/rtkit-daemon>
+}

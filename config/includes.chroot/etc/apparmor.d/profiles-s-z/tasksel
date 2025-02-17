@@ -1,0 +1,82 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/tasksel
+profile tasksel @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/perl>
+
+  @{exec_path} r,
+  @{bin}/perl r,
+
+  @{sh_path}                     rix,
+  @{bin}/tempfile                rix,
+  @{lib}/tasksel/tasksel-debconf rix,
+
+  @{lib}/tasksel/tests/*         rCx -> tasksel-tests,
+
+  # Think what to do about this (#FIXME#)
+  /usr/share/debconf/frontend         rPx,
+  #/usr/share/debconf/frontend        rCx -> frontend,
+
+  # Do not strip env to avoid errors like the following:
+  #  ERROR: ld.so: object 'libfakeroot-sysv.so' from LD_PRELOAD cannot be preloaded (cannot open
+  #  shared object file): ignored.
+  @{bin}/dpkg-query              rpx,
+  #
+  @{bin}/apt-cache               rPx,
+
+  @{bin}/debconf-apt-progress    rPx,
+
+  /usr/share/tasksel/** r,
+
+  /usr/share/debconf/confmodule r,
+
+  owner /tmp/file* w,
+
+
+  profile tasksel-tests flags=(complain) {
+    include <abstractions/base>
+
+    @{lib}/tasksel/tests/* r,
+    @{sh_path}        rix,
+
+  }
+
+  profile frontend flags=(complain) {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/perl>
+    include <abstractions/nameservice-strict>
+
+    /usr/share/debconf/frontend r,
+    @{bin}/perl r,
+
+    @{bin}/tasksel rPx,
+
+    @{sh_path}        rix,
+    @{bin}/stty       rix,
+    @{bin}/locale     rix,
+
+    # The following is needed when debconf uses dialog/whiptail frontend.
+    @{bin}/whiptail rPx,
+    owner /tmp/file* w,
+
+    /usr/share/debconf/confmodule r,
+
+    /etc/debconf.conf r,
+    owner /var/cache/debconf/{config,passwords,templates}.dat{,-new,-old} rwk,
+    /usr/share/debconf/templates/adequate.templates r,
+
+    /etc/shadow r,
+
+  }
+
+  include if exists <local/tasksel>
+}

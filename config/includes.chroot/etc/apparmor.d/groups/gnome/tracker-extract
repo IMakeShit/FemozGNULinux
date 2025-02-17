@@ -1,0 +1,95 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/tracker-extract-3
+profile tracker-extract @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.gtk.Private.RemoteVolumeMonitor>
+  include <abstractions/bus/org.gtk.vfs.Daemon>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/deny-sensitive-home>
+  include <abstractions/disks-read>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  network netlink raw,
+
+  signal (receive) set=(cont term) peer=@{systemd_user},
+  signal (receive) set=(term) peer=gdm,
+
+  # dbus: own bus=session name=org.freedesktop.Tracker3.Miner.Extract
+
+  # dbus: talk bus=session name=org.freedesktop.Tracker3 label=tracker-miner interface=org.freedesktop.DBus.{Properties,Peer}
+
+  dbus send bus=session path=/org/gtk/vfs/metadata
+       interface=org.gtk.vfs.Metadata
+       member={GetTreeFromDevice,Remove}
+       peer=(name=:*, label=gvfsd-metadata),
+
+  @{exec_path} mr,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/gdm/greeter/applications/*.desktop r,
+  /usr/share/hwdata/*.ids r,
+  /usr/share/ladspa/rdf/{,**} r,
+  /usr/share/osinfo/{,**} r,
+  /usr/share/poppler/{,**} r,
+  /usr/share/tracker3-miners/{,**} r,
+  /usr/share/tracker3/{,**} r,
+
+  /etc/blkid.conf r,
+  /etc/fstab r,
+
+  /var/lib/gdm{3,}/.cache/ rw,
+  /var/lib/gdm{3,}/.cache/fontconfig/[a-f0-9]*.cache-?{,.NEW,.LCK,.TMP-*} rw,
+  /var/lib/gdm{3,}/.cache/gstreamer-1.0/ rw,
+  /var/lib/gdm{3,}/.cache/gstreamer-1.0/registry.*.bin{,.tmp@{rand6}} rw,
+  /var/lib/gdm{3,}/.cache/tracker3/{,**} rw,
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+
+  /var/lib/lightdm/.cache/gstreamer-1.0/registry.*.bin{,.tmp@{rand6}} r,
+
+  /var/lib/flatpak/exports/share/applications/mimeinfo.cache r,
+  /var/lib/flatpak/exports/share/mime/mime.cache r,
+
+  # Allow to search user files
+  owner @{HOME}/{,**} r,
+  owner @{MOUNTS}/{,**} r,
+  owner /tmp/*/{,**} r,
+
+  owner @{user_cache_dirs}/tracker3/ w,
+  owner @{user_cache_dirs}/tracker3/files/{,**} rwk,
+  owner @{user_share_dirs}/gvfs-metadata/** r,
+
+  owner /tmp/tracker-extract-3-files.*/{,*} rw,
+
+  @{run}/blkid/blkid.tab r,
+
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+  @{run}/mount/utab r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+  /dev/media@{int} r,
+  /dev/video@{int} rw,
+  
+  # file_inherit
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/tracker-extract>
+}

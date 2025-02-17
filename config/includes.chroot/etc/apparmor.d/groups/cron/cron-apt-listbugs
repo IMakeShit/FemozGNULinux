@@ -1,0 +1,39 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/cron.{hourly,daily,weekly,monthly}/apt-listbugs
+profile cron-apt-listbugs @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{lib}/ruby/vendor_ruby/aptlistbugs/prefclean rCx -> prefclean,
+
+  @{run}/systemd/system r,
+
+
+  profile prefclean {
+    include <abstractions/base>
+
+    @{lib}/ruby/vendor_ruby/aptlistbugs/prefclean mr,
+
+    @{sh_path}        rix,
+    @{bin}/mktemp     rix,
+    @{bin}/rm         rix,
+    @{bin}/cp         rix,
+    @{bin}/date       rix,
+    @{bin}/cat        rix,
+
+    /var/spool/apt-listbugs/lastprefclean rw,
+
+  }
+
+  include if exists <local/cron-apt-listbugs>
+}

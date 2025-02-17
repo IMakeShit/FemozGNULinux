@@ -1,0 +1,30 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gnome-disks
+profile gnome-disks @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/dconf-write>
+  include <abstractions/disks-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/user-download-strict>
+
+  # dbus: own bus=session name=org.gnome.DiskUtility
+
+  @{exec_path} mr,
+
+  @{open_path}  rPx -> child-open,
+
+  owner @{user_cache_dirs}/gnome-disks/{,**} rw,
+
+        @{PROC}/1/cgroup r,
+  owner @{PROC}/@{pid}/cgroup r,
+
+  include if exists <local/gnome-disks>
+}

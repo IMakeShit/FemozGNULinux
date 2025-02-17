@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/update-desktop-database
+profile update-desktop-database @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability dac_override,
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  /usr/share/{,ubuntu/}applications/{,**/} r,
+  /usr/share/{,ubuntu/}applications/**.desktop r,
+  /usr/share/{,ubuntu/}applications/.mimeinfo.cache.* rw,
+  /usr/share/{,ubuntu/}applications/mimeinfo.cache w,
+
+  /usr/share/*/*.desktop r,
+
+  /var/lib/flatpak/{app/**/,}export{s,}/share/applications/{,**/} r,
+  /var/lib/flatpak/{app/**/,}export{s,}/share/applications/**.desktop r,
+  /var/lib/flatpak/{app/**/,}export{s,}/share/applications/.mimeinfo.cache.* rw,
+  /var/lib/flatpak/{app/**/,}export{s,}/share/applications/mimeinfo.cache w,
+
+  /var/lib/snapd/desktop/applications/{,**/} r,
+  /var/lib/snapd/desktop/applications/**.desktop r,
+  /var/lib/snapd/desktop/applications/.mimeinfo.cache.* rw,
+  /var/lib/snapd/desktop/applications/mimeinfo.cache w,
+
+  owner @{user_share_dirs}/.mimeinfo.cache.* rw,
+  owner @{user_share_dirs}/{,**/} r,
+  owner @{user_share_dirs}/**.desktop r,
+  owner @{user_share_dirs}/applications/.mimeinfo.cache.* rw,
+  owner @{user_share_dirs}/applications/mimeinfo.cache w,
+  owner @{user_share_dirs}/mimeinfo.cache w,
+
+  # Inherit silencer
+  deny network inet6 stream,
+  deny network inet stream,
+
+  include if exists <local/update-desktop-database>
+}

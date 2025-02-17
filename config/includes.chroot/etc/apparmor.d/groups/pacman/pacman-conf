@@ -1,0 +1,27 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pacman-conf
+profile pacman-conf @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  /etc/pacman.conf r,
+  /etc/pacman.d/mirrorlist r,
+  /etc/pacman.d/*-mirrorlist r,
+  
+  /dev/tty@{int} rw,
+
+  # Inherit Silencer
+  deny network inet6 stream,
+  deny network inet stream,
+
+  include if exists <local/pacman-conf>
+}

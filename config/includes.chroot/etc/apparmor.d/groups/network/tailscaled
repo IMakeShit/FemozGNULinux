@@ -1,0 +1,104 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/tailscaled
+profile tailscaled @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/nameservice-strict>
+  include <abstractions/ssl_certs>
+
+  capability dac_read_search,
+  capability mknod,
+  capability net_admin,
+  capability net_raw,
+  capability sys_ptrace,
+  capability syslog,
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network inet raw,
+  network inet6 raw,
+  network netlink raw,
+
+  ptrace (read),
+
+  dbus send bus=system path=/org/freedesktop/resolve1
+       interface=org.freedesktop.DBus.Peer
+       member=Ping
+       peer=(name=org.freedesktop.resolve1, label=systemd-resolved),
+
+  dbus send bus=system path=/org/freedesktop/resolve1
+       interface=org.freedesktop.DBus.Properties
+       member=Get
+       peer=(name=org.freedesktop.resolve1, label=systemd-resolved),
+
+  dbus send bus=system path=/org/freedesktop/resolve1
+       interface=org.freedesktop.resolve1.Manager
+       member={FlushCaches,SetLink*}
+       peer=(name=org.freedesktop.resolve1, label=systemd-resolved),
+
+  @{exec_path} mr,
+
+  @{bin}/ip                 rix,
+  @{bin}/resolvectl         rPx,
+  @{bin}/xtables-nft-multi  rix,
+
+  @{bin}/systemctl  rCx -> systemctl,
+
+  /etc/iproute2/rt_tables r,
+  /etc/apt/sources.list.d/tailscale.list r,
+
+  @{etc_rw}/resolv.*.conf rw,
+  @{etc_rw}/resolv.conf rw,
+  @{etc_rw}/resolv.conf.*.tmp rw,
+
+  owner /var/cache/{,**} rw,
+  owner /var/lib/tailscale/{,**} rw,
+
+  owner @{user_share_dirs}/tailscale/{,**} rw,
+
+  owner @{run}/systemd/notify w,
+  owner @{run}/tailscale/{,**} rw,
+
+  @{sys}/devices/virtual/dmi/id/{bios_vendor,product_name} r,
+  @{sys}/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+
+  @{PROC}/ r,
+  @{PROC}/@{pid}/mounts r,
+  @{PROC}/@{pid}/net/{,**} r,
+  @{PROC}/@{pids}/cmdline r,
+  @{PROC}/@{pids}/fd/ r,
+  @{PROC}/@{pids}/net/route r,
+  @{PROC}/1/cgroup r,
+  @{PROC}/1/environ r,
+  @{PROC}/1/stat r,
+  @{PROC}/cmdline r,
+  @{PROC}/sys/kernel/osrelease r,
+  @{PROC}/sys/net/{,**} r,
+
+  /dev/net/tun rw,
+
+  profile systemctl {
+    include <abstractions/base>
+    include <abstractions/systemctl>
+
+    capability mknod,
+    capability net_admin,
+  
+    network netlink raw,
+
+    /dev/net/tun rw,
+
+    include if exists <local/tailscaled_systemctl>
+  }
+
+  include if exists <local/tailscaled>
+}

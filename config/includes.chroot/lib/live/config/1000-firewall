@@ -1,0 +1,15 @@
+#!/bin/bash
+
+iptables -F
+iptables -X
+# Разрешаем трафик от пользователя debian-tor (UID 1001)
+iptables -A INPUT -m owner --uid-owner 115 -j ACCEPT
+iptables -t mangle -A PREROUTING -m conntrack --ctstate INVALID -j DROP &&
+iptables -A INPUT -p icmp --icmp-type 0 -m conntrack --ctstate NEW -j ACCEPT &&
+iptables -A INPUT -p icmp --icmp-type 3 -m conntrack --ctstate NEW -j ACCEPT &&
+iptables -A INPUT -p icmp --icmp-type 11 -m conntrack --ctstate NEW -j ACCEPT &&
+iptables -A INPUT -p icmp -j DROP &&
+iptables -t mangle -A PREROUTING -p tcp -m conntrack --ctstate NEW -m tcpmss ! --mss 536:65535 -j DROP > /dev/null 2>&1; then
+iptables-save > /etc/iptables/rules.v4
+iptables-save > /etc/iptables/rules.v6
+iptables -L -n -v

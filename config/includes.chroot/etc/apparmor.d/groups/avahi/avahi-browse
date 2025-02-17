@@ -1,0 +1,27 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022 Jeroen Rijken
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/avahi-browse @{bin}/avahi-browse-domains
+profile avahi-browse @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.Avahi>
+  include <abstractions/consoles>
+
+  dbus receive bus=system path=/Client@{int}/ServiceTypeBrowser@{int}
+      interface=org.freedesktop.Avahi.ServiceTypeBrowser
+       member={ItemNew,AllForNow,CacheExhausted}
+       peer=(name=:*, label=avahi-daemon),
+
+  @{exec_path} mr,
+
+  @{lib}/@{multiarch}/avahi/service-types.db rwk,
+
+  include if exists <local/avahi-browse>
+}

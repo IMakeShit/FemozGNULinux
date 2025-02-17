@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/plasma-browser-integration-host
+profile plasma-browser-integration-host @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/graphics>
+  include <abstractions/kde-strict>
+  include <abstractions/nameservice-strict>
+
+  capability sys_ptrace,
+
+  ptrace (read) peer={chromium,brave,chrome,opera},
+
+  @{exec_path} mr,
+
+  /etc/xdg/menus/applications-merged/ r,
+
+  /usr/share/kservices5/{,**} r,
+
+  /etc/xdg/menus/ r,
+  /etc/xdg/taskmanagerrulesrc r,
+
+  /var/lib/flatpak/exports/share/mime/ r,
+
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+  owner @{user_cache_dirs}/ksycoca5_* r,
+
+  owner @{user_config_dirs}/menus/ r,
+
+  owner @{user_share_dirs}/kservices5/ r,
+  owner @{user_share_dirs}/kservices5/ServiceMenus/ r,
+
+        @{PROC}/sys/kernel/core_pattern r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/stat r,
+
+  include if exists <local/plasma-browser-integration-host>
+}

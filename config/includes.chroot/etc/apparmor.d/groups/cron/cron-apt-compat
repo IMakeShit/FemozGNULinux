@@ -1,0 +1,29 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/cron.{hourly,daily,weekly,monthly}/apt-compat
+profile cron-apt-compat @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} r,
+  @{sh_path}                   rix,
+
+  @{bin}/on_ac_power          rPx,
+
+  @{bin}/apt-config            rPx,
+  @{lib}/apt/apt.systemd.daily rPx,
+
+  @{bin}/dd                    rix,
+  @{bin}/cksum                 rix,
+  @{bin}/cut                   rix,
+  @{bin}/which{,.debianutils}  rix,
+  @{bin}/sleep                 rix,
+
+  include if exists <local/cron-apt-compat>
+}

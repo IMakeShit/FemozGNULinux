@@ -1,0 +1,48 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pacdiff
+profile pacdiff @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+
+  capability dac_read_search,
+  capability mknod,
+
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} mr,
+
+  @{sh_path}          rix,
+  @{bin}/{m,g,}awk    rix,
+  @{bin}/cat          rix,
+  @{bin}/cmp          rix,
+  @{bin}/find         rix,
+  @{bin}/locate       rix,
+  @{bin}/pacman       rix,
+  @{bin}/pacman-conf  rPx,
+  @{bin}/pacsort      rix,
+  @{bin}/rm           rix,
+  @{bin}/sed          rix,
+  @{bin}/tput         rix,
+  @{bin}/vim          rix,
+
+  # packages files
+  / r,
+  /boot/{,**} r,
+  /etc/{,**} r,
+  /opt/{,**} r,
+  /srv/{,**} r,
+  /usr/{,**} r,
+  /var/{,**} r,
+
+  /dev/tty rw,
+  /dev/pts/@{int} rw,
+
+  include if exists <local/pacdiff>
+}

@@ -1,0 +1,37 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{name} = firefox{,.sh,-esr,-bin}
+@{lib_dirs} = @{lib}/@{name}/ /opt/@{name}/
+@{config_dirs} = @{HOME}/.mozilla/
+
+@{exec_path} = @{lib_dirs}/pingsender
+profile firefox-pingsender @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet stream,
+  network inet6 stream,
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+  signal (receive) set=(term, kill) peer=firefox,
+
+  @{exec_path} mr,
+
+  owner @{config_dirs}/firefox/*.*/saved-telemetry-pings/@{uuid} rw,
+
+  owner @{PROC}/@{pid}/stat r,
+  owner @{PROC}/@{pid}/task/@{tid}/stat r,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/firefox-pingsender>
+}

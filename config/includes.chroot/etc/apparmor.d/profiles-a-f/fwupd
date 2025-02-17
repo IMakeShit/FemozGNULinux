@@ -1,0 +1,149 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,fwupd/}fwupd
+profile fwupd @{exec_path} flags=(complain,attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.bluez>
+  include <abstractions/bus/org.freedesktop.ModemManager1>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/bus/org.freedesktop.UDisks2>
+  include <abstractions/bus/org.freedesktop.UPower>
+  include <abstractions/consoles>
+  include <abstractions/disks-read>
+  include <abstractions/fonts>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  capability dac_override,
+  capability dac_read_search,
+  capability linux_immutable,
+  capability mknod,
+  capability net_admin,
+  capability sys_admin,
+  capability sys_nice,
+  capability sys_rawio,
+  capability syslog,
+
+  network netlink raw,
+
+  # dbus: own bus=system name=org.freedesktop.fwupd path=/
+
+  dbus send bus=system path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus send bus=system path=/org/freedesktop/UDisks2/Manager
+       interface=org.freedesktop.UDisks2.Manager
+       member=GetBlockDevices
+       peer=(name=:*, label=udisksd),
+
+  @{exec_path} mr,
+
+  @{lib}/fwupd/fwupd-detect-cet rix,
+
+  @{bin}/gpg{,2}     rCx -> gpg,
+  @{bin}/gpgconf     rCx -> gpg,
+  @{bin}/gpgsm       rCx -> gpg,
+
+  /usr/share/fwupd/{,**} r,
+  /usr/share/mime/mime.cache r,
+
+  /etc/fwupd/{,**} rw,
+  /etc/lsb-release r,
+  /etc/pki/fwupd-metadata/{,**} r,
+  /etc/pki/fwupd/{,**} r,
+
+  /var/cache/fwupd/{,**} rw,
+  /var/lib/fwupd/{,**} rw,
+  /var/lib/fwupd/pending.db rwk,
+  /var/tmp/etilqs_@{hex} rw,
+
+  /boot/{,**} r,
+  /boot/EFI/*/.goutputstream-@{rand6} rw,
+  /boot/EFI/*/fw/fwupd-*.cap{,.*} rw,
+  /boot/EFI/*/fwupdx@{int}.efi rw,
+  @{lib}/fwupd/efi/fwupdx@{int}.efi{,.signed} r,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  # In order to get to this file, the attach_disconnected flag has to be set
+  owner @{user_cache_dirs}/fwupd/lvfs-metadata.xml.gz r,
+  owner @{user_cache_dirs}/gnome-software/fwupd/{,**} r,
+
+  @{sys}/**/ r,
+  @{sys}/devices/** r,
+
+  @{sys}/firmware/acpi/** r,
+  @{sys}/firmware/dmi/tables/DMI r,
+  @{sys}/firmware/dmi/tables/smbios_entry_point r,
+  @{sys}/firmware/efi/** r,
+  @{sys}/firmware/efi/efivars/BootNext-@{uuid} rw,
+  @{sys}/firmware/efi/efivars/Boot@{hex}-@{uuid} rw,
+  @{sys}/firmware/efi/efivars/fwupd-* rw,
+  @{sys}/kernel/security/lockdown r,
+  @{sys}/kernel/security/tpm[0-9]/binary_bios_measurements r,
+  @{sys}/power/mem_sleep r,
+
+  @{run}/motd.d/ r,
+  @{run}/motd.d/@{int}-fwupd* rw,
+  @{run}/motd.d/fwupd/{,**} rw,
+  @{run}/mount/utab r,
+  @{run}/systemd/inhibit/[0-9]*.ref rw,
+  @{run}/udev/data/* r,
+
+  @{PROC}/@{pids}/fd/ r,
+  @{PROC}/@{pids}/mountinfo r,
+  @{PROC}/@{pids}/mounts r,
+  @{PROC}/1/cgroup r,
+  @{PROC}/cmdline r,
+  @{PROC}/modules r,
+  @{PROC}/swaps r,
+  @{PROC}/sys/kernel/tainted r,
+
+  /dev/bus/usb/ r,
+  /dev/bus/usb/@{int}/@{int} rw,
+  /dev/cpu/@{int}/msr rw,
+  /dev/drm_dp_aux@{int} rw,
+  /dev/gpiochip@{int} r,
+  /dev/hidraw@{int} rw,
+  /dev/ipmi@{int} rwk,
+  /dev/mei@{int} rw,
+  /dev/mem r,
+  /dev/mtd@{int} rw,
+  /dev/sd[a-z]* r,
+  /dev/tpm@{int} rw,
+  /dev/tpmrm@{int} rw,
+  /dev/wmi/* r,
+
+  profile gpg flags=(complain) {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    capability dac_read_search,
+
+    @{bin}/gpg{,2}    mr,
+    @{bin}/gpgconf    mr,
+    @{bin}/gpgsm      mr,
+    @{bin}/gpg-agent  mrix,
+    @{lib}/gnupg/scdaemon rix,
+
+    owner /var/lib/fwupd/gnupg/ rw,
+    owner /var/lib/fwupd/gnupg/** rwkl -> /var/lib/fwupd/gnupg/**,
+
+    owner @{PROC}/@{pids}/fd/ r,
+
+    include if exists <local/fwupd_gpg>
+  }
+
+  include if exists <local/fwupd>
+}

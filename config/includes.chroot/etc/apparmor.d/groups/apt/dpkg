@@ -1,0 +1,87 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dpkg
+profile dpkg @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability setgid,
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/cat         rix,
+  @{bin}/rm          rix,
+
+  @{bin}/deb-systemd-helper rix,
+  @{bin}/deb-systemd-invoke rix,
+  @{bin}/dpkg-deb    rpx,
+  @{bin}/dpkg-query  rpx,
+  @{bin}/dpkg-split  rPx,
+  @{bin}/systemctl   rCx -> systemctl,
+  @{lib}/needrestart/dpkg-status rPx,
+  /usr/share/debian-security-support/check-support-status.hook rPx,
+
+  @{bin}/pager       rPx -> child-pager,
+  @{bin}/less        rPx -> child-pager,
+  @{bin}/more        rPx -> child-pager,
+  @{bin}/diff        rPx -> child-pager,
+
+  # Package maintainer's scripts
+  # Move it to a child profile once more transitions will be available
+  /var/lib/dpkg/info/*.{config,templates} rPUx,
+  /var/lib/dpkg/info/*.{preinst,postinst} rPUx,
+  /var/lib/dpkg/info/*.{prerm,postrm}     rPUx,
+  /var/lib/dpkg/tmp.ci/{config,templates} rPUx,
+  /var/lib/dpkg/tmp.ci/{preinst,postinst} rPUx,
+  /var/lib/dpkg/tmp.ci/{prerm,postrm}     rPUx,
+  #/var/lib/dpkg/info/*.{config,templates} rCx -> scripts,
+  #/var/lib/dpkg/info/*.{preinst,postinst} rCx -> scripts,
+  #/var/lib/dpkg/info/*.{prerm,postrm}     rCx -> scripts,
+  #/var/lib/dpkg/tmp.ci/{config,templates} rCx -> scripts,
+  #/var/lib/dpkg/tmp.ci/{preinst,postinst} rCx -> scripts,
+  #/var/lib/dpkg/tmp.ci/{prerm,postrm}     rCx -> scripts,
+
+  # For shell pwd
+  /root/ r,
+
+  # Install/update packages
+  / r,
+  /*{,/} rw,
+  /boot/** rwl -> /boot/**,
+  /etc/** rwl -> /etc/**,
+  /opt/** rwl -> /opt/**,
+  /srv/** rwl -> /srv/**,
+  /usr/** rwlk -> /usr/**,
+  /var/** rwlk -> /var/**,
+
+  owner /tmp/apt-dpkg-install-*/ r,
+
+  @{run}/systemd/userdb/ r,
+
+        @{PROC}/sys/kernel/random/boot_id r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  owner /dev/tty@{int} rw,
+
+  profile systemctl {
+    include <abstractions/base>
+    include <abstractions/systemctl>
+
+    include if exists <local/dpkg_systemctl>
+  }
+
+  include if exists <local/dpkg>
+}

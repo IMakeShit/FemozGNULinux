@@ -1,0 +1,54 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/uupdate
+profile uupdate @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/perl>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/basename   rix,
+  @{bin}/which{,.debianutils}      rix,
+  @{bin}/tr         rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/getopt     rix,
+  @{bin}/cut        rix,
+  @{bin}/mktemp     rix,
+  @{bin}/ls         rix,
+  @{bin}/wc         rix,
+  @{bin}/mv         rix,
+  @{bin}/rm         rix,
+  @{bin}/cp         rix,
+  @{bin}/expr       rix,
+
+  @{bin}/perl       rix,
+  @{bin}/chmod      rix,
+  @{bin}/md5sum     rix,
+
+  @{bin}/tar        rix,
+  @{bin}/bzip2      rix,
+  @{bin}/xz         rix,
+
+  # FIXME
+  @{bin}/debchange           rPUx,
+  @{bin}/dpkg-vendor         rPUx,
+  @{bin}/dpkg-parsechangelog rPUx,
+  @{bin}/dpkg                 rPx -> child-dpkg,
+
+  /etc/devscripts.conf r,
+
+  # For package building
+  owner @{user_build_dirs}/** rwkl -> @{user_build_dirs}/**,
+
+  include if exists <local/uupdates>
+}

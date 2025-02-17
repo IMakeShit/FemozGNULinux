@@ -1,0 +1,98 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/hypnotix
+@{exec_path} += @{lib}/hypnotix/hypnotix.py
+profile hypnotix @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/opencl-intel>
+  include <abstractions/openssl>
+  include <abstractions/python>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-download-strict>
+  include <abstractions/vulkan>
+
+  signal (send) set=(term, kill) peer=youtube-dl,
+  signal (send) set=(term, kill) peer=yt-dlp,
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} rix,
+  @{bin}/python3.@{int}  r,
+
+  @{sh_path}             rix,
+  @{bin}/ldconfig        rix,
+  @{bin}/mkdir           rix,
+
+  @{bin}/xdg-screensaver rCx -> xdg-screensaver,
+
+  @{bin}/youtube-dl     rPUx,
+  @{bin}/yt-dlp         rPUx,
+  @{lib}/firefox/firefox rPx,
+
+  /usr/share/hypnotix/{,**} r,
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+
+  /etc/machine-id r,
+  /etc/vdpau_wrapper.cfg r,
+  /var/lib/dbus/machine-id r,
+
+  owner @{HOME}/.hypnotix/ rw,
+  owner @{HOME}/.hypnotix/** rw,
+
+  owner @{user_music_dirs}/** r,
+
+  @{sys}/devices/@{pci}/drm/ r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/cmdline r,
+
+  /dev/ r,
+
+  # Silencer
+  deny @{lib}/hypnotix/** w,
+
+  profile xdg-screensaver {
+    include <abstractions/base>
+    include <abstractions/consoles>
+
+    @{bin}/xdg-screensaver mr,
+
+    @{sh_path}          rix,
+    @{bin}/mv           rix,
+    @{bin}/{,e}grep     rix,
+    @{bin}/sed          rix,
+    @{bin}/which{,.debianutils}        rix,
+    @{bin}/xset         rix,
+    @{bin}/xautolock    rix,
+    @{bin}/dbus-send    rix,
+
+    owner @{HOME}/.Xauthority r,
+
+    # file_inherit
+    /dev/dri/card@{int} rw,
+    network inet stream,
+    network inet6 stream,
+  }
+
+  include if exists <local/hypnotix>
+}

@@ -1,0 +1,41 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gvfs/}gvfs-gphoto2-volume-monitor
+profile gvfs-gphoto2-volume-monitor @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/disks-read>
+  include <abstractions/devices-usb>
+
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  dbus bind bus=session name=org.gtk.vfs.GPhoto2VolumeMonitor,
+  dbus (send, receive) bus=session path=/org/gtk/Private/RemoteVolumeMonitor
+       interface=org.gtk.Private.RemoteVolumeMonitor
+       peer=(name="{:*,org.freedesktop.DBus}"),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect 
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  /etc/fstab r,
+
+  @{sys}/class/scsi_generic/ r,
+
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  include if exists <local/gvfs-gphoto2-volume-monitor>
+}

@@ -1,0 +1,106 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/kf5/kconf_update
+profile kconf_update @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+  include <abstractions/graphics>
+  include <abstractions/gtk>
+  include <abstractions/kde-strict>
+  include <abstractions/perl>
+  include <abstractions/python>
+
+  ptrace (read),
+
+  @{exec_path} mr,
+
+  @{sh_path}                             rix,
+  @{bin}/{,p}grep                        rix,
+  @{bin}/python3.@{int}                  rix,
+  @{bin}/qtpaths                         rix,
+  @{bin}/sed                             rix,
+
+  @{lib}/kconf_update_bin/*              rix,
+  /usr/share/kconf_update/*.py           rix,
+  /usr/share/kconf_update/*.sh           rix,
+
+  /usr/share/kconf_update/{,**} r,
+  /usr/share/kglobalaccel/org.kde.krunner.desktop r,
+
+  /etc/machine-id r,
+  /etc/xdg/konsolerc r,
+  /etc/xdg/ui/ui_standards.rc r,
+
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+
+  owner @{user_config_dirs}/#@{int} rw,
+  owner @{user_config_dirs}/akregatorrc.lock rwk,
+  owner @{user_config_dirs}/akregatorrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/dolphinrc.lock rwk,
+  owner @{user_config_dirs}/dolphinrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/gtk-{3,4}.0/* rwlk -> @{user_config_dirs}/gtk-{3,4}.0/**,
+  owner @{user_config_dirs}/kactivitymanagerd-statsrc rw,
+  owner @{user_config_dirs}/kateschemarc.lock rwk,
+  owner @{user_config_dirs}/kateschemarc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kcminputrc.lock rwk,
+  owner @{user_config_dirs}/kcminputrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kconf_updaterc.lock rwk,
+  owner @{user_config_dirs}/kconf_updaterc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kdeglobals.lock rwk,
+  owner @{user_config_dirs}/kdeglobals{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kglobalshortcutsrc.lock rwk,
+  owner @{user_config_dirs}/kglobalshortcutsrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/khotkeysrc.lock rwk,
+  owner @{user_config_dirs}/khotkeysrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kmixrc.lock rwk,
+  owner @{user_config_dirs}/kmixrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/konsolerc.lock rwk,
+  owner @{user_config_dirs}/konsolerc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/krunnerrc.lock rwk,
+  owner @{user_config_dirs}/krunnerrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/krunnerstaterc.lock rwk,
+  owner @{user_config_dirs}/krunnerstaterc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kscreenlockerrc.lock rwk,
+  owner @{user_config_dirs}/kscreenlockerrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/ksmserverrc.lock rwk,
+  owner @{user_config_dirs}/ksmserverrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kwinrc.lock rwk,
+  owner @{user_config_dirs}/kwinrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kwinrulesrc.lock rwk,
+  owner @{user_config_dirs}/kwinrulesrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/kxkbrc.lock rwk,
+  owner @{user_config_dirs}/kxkbrc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+  owner @{user_config_dirs}/plasma-org.kde.plasma.desktop-appletsrc rw,
+  owner @{user_config_dirs}/plasmashellrc r,
+  owner @{user_config_dirs}/sed@{rand6} rw,
+  owner @{user_config_dirs}/xsettingsd/xsettingsd.conf rw,
+
+  owner @{user_share_dirs}/#@{int} rw,
+  owner @{user_share_dirs}/krunnerstaterc.lock rwk,
+  owner @{user_share_dirs}/krunnerstaterc{,.@{rand6}} rwl -> @{user_config_dirs}/#@{int},
+
+  owner /tmp/#@{int} rw,
+  owner /tmp/kconf_update.@{rand6}.lock rwk,
+  owner /tmp/kconf_update.@{rand6}{,.@{rand6}} rwl -> /tmp/#@{int},
+
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node@{int}/meminfo r,
+
+        @{PROC}/ r,
+        @{PROC}/@{sys}/kernel/random/boot_id r,
+        @{PROC}/tty/drivers r,
+        @{PROC}/uptime r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/stat r,
+
+  /dev/tty rw,
+
+  include if exists <local/kconf_update>
+}

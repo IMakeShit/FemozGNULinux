@@ -1,0 +1,62 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/popularity-contest
+profile popularity-contest @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/perl>
+  include <abstractions/nameservice-strict>
+
+  # For popularity-contest --su-nobody
+  capability setuid,
+  capability setgid,
+
+  capability sys_ptrace,
+  ptrace (read),
+
+  capability dac_read_search,
+
+  @{exec_path} r,
+  @{bin}/perl r,
+
+  @{sh_path}         rix,
+  @{bin}/env         rix,
+
+  # Do not strip env to avoid errors like the following:
+  #  ERROR: ld.so: object 'libfakeroot-sysv.so' from LD_PRELOAD cannot be preloaded (cannot open
+  #  shared object file): ignored.
+  @{bin}/dpkg-query  rpx,
+  #
+  @{bin}/dpkg        rPx -> child-dpkg,
+  @{bin}/dpkg-divert rPx -> child-dpkg-divert,
+
+  # For shell pwd
+  /root/ r,
+
+  /etc/popularity-contest.conf r,
+
+  /etc/dpkg/origins/debian r,
+
+  /etc/shadow r,
+
+  /var/lib/dpkg/info/{,*.list} r,
+
+  @{PROC}/ r,
+
+  /var/log/ r,
+  /var/log/popularity-contest.new w,
+
+  /var/lib/ r,
+
+  # file_inherit
+  /tmp/#@{int} rw,
+  /var/log/popularity-contest.[0-9]* w,
+
+  include if exists <local/popularity-contest>
+}

@@ -1,0 +1,54 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/unmkinitramfs
+profile unmkinitramfs @{exec_path} {
+  include <abstractions/base>
+
+  # To avoid the following error:
+  #  cpio: etc/console-setup/null: Cannot mknod: Operation not permitted
+  capability mknod,
+
+  @{exec_path} r,
+
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/bzip2      rix,
+  @{bin}/cat        rix,
+  @{bin}/cpio       rix,
+  @{bin}/dd         rix,
+  @{bin}/getopt     rix,
+  @{bin}/gzip       rix,
+  @{bin}/lz4cat     rix,
+  @{bin}/lzma       rix,
+  @{bin}/lzop       rix,
+  @{bin}/mkdir      rix,
+  @{bin}/mktemp     rix,
+  @{bin}/rm         rix,
+  @{bin}/xz         rix,
+  @{bin}/xzcat      rix,
+  @{bin}/zstd       rix,
+
+        /boot/ r,
+  owner /boot/initrd.img-* r,
+        /tmp/ r,
+  owner /tmp/initrd.img-* r,
+        /mnt/ r,
+  owner /mnt/initrd.img-* r,
+        /mnt/boot/ r,
+  owner /mnt/boot/initrd.img-* r,
+
+  # To extract the content of the initrd image
+  owner /tmp/** rwl -> /tmp/**,
+
+        /var/tmp/ r,
+  owner /var/tmp/unmkinitramfs_* rw,
+
+  include if exists <local/unmkinitramfs>
+}

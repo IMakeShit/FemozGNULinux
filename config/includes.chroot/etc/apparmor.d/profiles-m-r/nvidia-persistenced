@@ -1,0 +1,27 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/nvidia-persistenced
+profile nvidia-persistenced @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/nvidia>
+
+  capability chown,
+  capability setgid,
+  capability setuid,
+
+  @{exec_path} mr,
+
+  /etc/netconfig r,
+
+  @{run}/nvidia-persistenced/{,**} rw,
+  @{run}/nvidia-persistenced/*.pid k,
+
+  include if exists <local/nvidia-persistenced>
+}

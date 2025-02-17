@@ -1,0 +1,76 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/sensors-detect
+profile sensors-detect @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/perl>
+
+  capability syslog,
+
+  @{exec_path} rm,
+ 
+  @{bin}/kmod       rCx -> kmod,
+  @{bin}/perl         r,
+  @{bin}/systemctl  rCx -> systemctl,
+  @{bin}/udevadm    rCx -> udevadm,
+  @{bin}/uname      rix,
+
+  /etc/udev/udev.conf r,
+
+  @{sys}/bus/pci/devices/ r,
+  @{sys}/class/i2c-adapter/ r,
+  @{sys}/devices/@{pci}/{class,vendor,device} r,
+  @{sys}/devices/@{pci}/i2c-@{int}/name r,
+  @{sys}/devices/@{pci}/modalias r,
+  @{sys}/devices/virtual/dmi/id/board_{version,vendor,name} r,
+  @{sys}/devices/virtual/dmi/id/chassis_type r,
+  @{sys}/devices/virtual/dmi/id/product_{version,name} r,
+  @{sys}/devices/virtual/dmi/id/sys_vendor r,
+
+        @{PROC}/modules r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /dev/i2c-@{int} r,
+
+  profile udevadm {
+    include <abstractions/base>
+    include <abstractions/systemd-common>
+
+    capability sys_ptrace,
+
+    @{bin}/udevadm mr,
+
+    /etc/udev/udev.conf r,
+
+    include if exists <local/sensors-detect_udevadm>
+  }
+
+  profile kmod {
+    include <abstractions/base>
+
+    @{bin}/kmod mr,
+
+    @{lib}/modprobe.d/{,*.conf} r,
+    /etc/modprobe.d/{,*.conf} r,
+
+    @{PROC}/cmdline r,
+
+    include if exists <local/sensors-detect_udevadm>
+  }
+
+  profile systemctl {
+    include <abstractions/base>
+    include <abstractions/systemctl>
+
+    include if exists <local/sensors-detect_systemctl>
+  }
+
+  include if exists <local/sensors-detect>
+}

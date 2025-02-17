@@ -1,0 +1,80 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/firewalld
+profile firewalld @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  capability mknod,
+  capability net_admin,
+  capability net_raw,
+  capability setpcap,
+
+  network inet raw,
+  network inet6 raw,
+  network netlink raw,
+
+  dbus receive bus=system path=/org/fedoraproject/FirewallD1
+       interface=org.fedoraproject.FirewallD1.direct
+       member=passthrough
+       peer=(name=:*, label=libvirtd),
+
+  dbus receive bus=system path=/org/fedoraproject/FirewallD1
+       interface=org.fedoraproject.FirewallD1.zone
+       member={changeZoneOfInterface,getZones}
+       peer=(name=:*, label=libvirtd),
+
+  dbus receive bus=system path=/org/fedoraproject/FirewallD1
+       interface=org.fedoraproject.FirewallD1.zone
+       member={changeZoneOfInterface,removeInterface}
+       peer=(name=:*, label=libvirtd),
+
+  @{exec_path} mr,
+
+  @{bin}/ r,
+  @{bin}/alts                     rix,
+  @{bin}/ebtables-legacy          rix,
+  @{bin}/ebtables-legacy-restore  rix,
+  @{bin}/false                    rix,
+  @{bin}/ipset                    rix,
+  @{bin}/kmod                     rPx,
+  @{bin}/xtables-legacy-multi     rix,
+  @{bin}/xtables-nft-multi        rix,
+
+  /usr/local/lib/python3.10/dist-packages/ r,
+
+  /usr/share/libalternatives/ r,
+  /usr/share/libalternatives/ebtables*/{,*} r,
+  /usr/share/libalternatives/ip{,4,6}tables*/{,*} r,
+
+  /etc/firewalld/{,**} r,
+  /etc/firewalld/zones/{,**} rw,
+  /etc/iproute2/group r,
+  /etc/iproute2/rt_realms r,
+
+  /var/lib/ebtables/lock rwk,
+
+  /var/log/firewalld rw,
+
+  @{run}/firewalld/{,*} rw,
+  @{run}/xtables.lock rwk,
+
+        @{PROC}/sys/kernel/modprobe r,
+        @{PROC}/sys/net/ipv{4,6}/ip_forward rw,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pids}/net/ip_tables_names r,
+
+  include if exists <local/firewalld>
+}

@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{name} = opera{,-beta,-developer}
+@{domain} = com.opera.Opera
+@{lib_dirs} = @{lib}/@{multiarch}/@{name}
+@{config_dirs} = @{user_config_dirs}/@{name}
+@{cache_dirs} = @{user_cache_dirs}/@{name}
+
+@{exec_path} = @{lib_dirs}/@{name}
+profile opera @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/chromium>
+
+  @{exec_path} mrix,
+
+  @{lib_dirs}/opera_autoupdate    krix,
+  @{lib_dirs}/opera_crashreporter  rPx,
+  @{lib_dirs}/opera-sandbox        rPx,
+
+  /opt/google/chrome{,-beta,-unstable}/libwidevinecdm.so mr,
+  /opt/google/chrome{,-beta,-unstable}/libwidevinecdmadapter.so mr,
+
+  include if exists <local/opera>
+}

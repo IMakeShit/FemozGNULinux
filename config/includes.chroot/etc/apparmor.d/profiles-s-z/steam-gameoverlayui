@@ -1,0 +1,54 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{steam_lib_dirs} = @{user_share_dirs}/Steam/ubuntu[0-9]*_{32,64}
+@{exec_path} = @{steam_lib_dirs}/gameoverlayui
+profile steam-gameoverlayui @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/desktop>
+  include <abstractions/graphics>
+
+  network inet stream,
+  network inet6 stream,
+
+  unix (receive) type=stream,
+
+  @{exec_path} mr,
+
+  @{steam_lib_dirs}/*.so*  mr,
+  @{steam_lib_dirs}/steam-runtime/{usr/,}lib/**.so*  mr,
+
+  /usr/share/fonts/{,**}  rk,  # ?
+
+  / r,
+  /home/ r,
+  /tmp/ r,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/.steam/registry.vdf  rk,
+  owner @{HOME}/.steam/steam.pipe r,
+  owner @{steam_lib_dirs}/fontconfig/{,**} rwl,
+  owner @{user_share_dirs}/Steam/{,**} r,
+  owner @{user_share_dirs}/Steam/config/DialogConfigOverlay*.vdf rw,
+  owner @{user_share_dirs}/Steam/public/* rk,
+  owner @{user_share_dirs}/Steam/resource/{,**} rk,
+  owner @{user_share_dirs}/Steam/userdata/@{int}/{,**} rk,
+
+  owner /dev/shm/u@{uid}-Shm_@{hex} rw,
+  owner /dev/shm/u@{uid}-ValveIPCSharedObj-* rwk,
+  owner /dev/shm/ValveIPCSHM_@{uid} rw,
+
+  owner /tmp/gameoverlayui.log* rw,
+  owner /tmp/steam_chrome_overlay_uid@{uid}_spid@{pids} rw,
+  owner /tmp/miles_image_* mrw,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/steam-gameoverlayui>
+}

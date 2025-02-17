@@ -1,0 +1,64 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/fuseiso
+profile fuseiso @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  # Be able to mount ISO images
+  mount fstype=fuse.fuseiso -> @{HOME}/*/,
+  mount fstype=fuse.fuseiso -> @{HOME}/*/*/,
+  mount fstype=fuse.fuseiso -> @{user_cache_dirs}/**/,
+
+  @{exec_path} mr,
+
+  @{bin}/fusermount{,3} rCx -> fusermount,
+
+  # Where to mount ISO files
+  owner @{HOME}/*/ rw,
+  owner @{HOME}/*/*/ rw,
+  owner @{user_cache_dirs}/**/ r,
+
+  owner @{HOME}/.mtab.fuseiso rwk,
+  owner @{HOME}/.mtab.fuseiso.new rw,
+
+  # Image files to be mounted
+  owner @{user_img_dirs}/{,**} rwk,
+
+  /dev/fuse rw,
+
+  profile fusermount {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    # To mount anything:
+    capability sys_admin,
+
+    capability dac_read_search,
+
+    mount fstype={fuse,fuse.fuseiso} -> @{HOME}/*/,
+    mount fstype={fuse,fuse.fuseiso} -> @{HOME}/*/*/,
+    mount fstype={fuse,fuse.fuseiso} -> @{user_cache_dirs}/**/,
+
+    @{bin}/fusermount{,3} mr,
+
+    /etc/fuse.conf r,
+
+    # Image files to be mounted
+    owner @{user_img_dirs}/{,**} r,
+
+    @{PROC}/@{pid}/mounts r,
+
+    /dev/fuse rw,
+
+  }
+
+  include if exists <local/fuseiso>
+}

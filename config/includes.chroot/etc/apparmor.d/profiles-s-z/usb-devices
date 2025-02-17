@@ -1,0 +1,32 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/usb-devices
+profile usb-devices @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/devices-usb>
+
+       capability dac_read_search,
+  deny capability dac_override,
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/cat        rix,
+  @{bin}/cut        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/basename   rix,
+  @{bin}/readlink   rix,
+
+  # For shell pwd
+  /root/ r,
+
+  include if exists <local/usb-devices>
+}

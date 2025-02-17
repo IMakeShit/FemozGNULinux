@@ -1,0 +1,93 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/virtnodedevd
+profile virtnodedevd @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/devices-usb>
+  include <abstractions/disks-read>
+  include <abstractions/freedesktop.org>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  capability net_admin,
+  capability sys_admin,
+
+  network netlink raw,
+
+  ptrace (read) peer=virtqemud,
+  ptrace (read) peer=unconfined,
+
+  @{exec_path} mr,
+
+  @{bin}/mdevctl rPx,
+
+  /usr/share/hwdata/*.ids r,
+  /usr/share/pci.ids r,
+
+  /etc/libvirt/libvirt.conf r,
+  /etc/libvirt/virtnodedevd.conf r,
+  /etc/mdevctl.d/{,**} r,
+
+        @{run}/systemd/inhibit/*.ref rw,
+  owner @{run}/libvirt/common/system.token rwk,
+  owner @{run}/libvirt/nodedev/ rw,
+  owner @{run}/libvirt/nodedev/driver.pid wk,
+  owner @{run}/user/@{uid}/libvirt/common/system.token rwk,
+  owner @{run}/user/@{uid}/libvirt/nodedev/{,**} rwk,
+  owner @{run}/user/@{uid}/libvirt/virtnodedevd* rwk,
+  owner @{run}/virtnodedevd.pid wk,
+
+  @{run}/utmp rk,
+
+  @{run}/udev/data/+backlight:* r,
+  @{run}/udev/data/+bluetooth:* r,
+  @{run}/udev/data/+dmi:id r,
+  @{run}/udev/data/+drm:card@{int}-* r,   # for screen outputs
+  @{run}/udev/data/+input:input@{int} r,  # for mouse, keyboard, touchpad
+  @{run}/udev/data/+leds:* r,
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/+platform:* r,
+  @{run}/udev/data/+rfkill:* r,
+  @{run}/udev/data/+sound:* r,
+  @{run}/udev/data/+thunderbolt:* r,
+
+  @{run}/udev/data/c1:@{int} r,           # For RAM disk
+  @{run}/udev/data/c10:@{int} r,          # For non-serial mice, misc features
+  @{run}/udev/data/c13:@{int} r,          # For /dev/input/*
+  @{run}/udev/data/c21:@{int} r,          # Generic SCSI access
+  @{run}/udev/data/c29:@{int} r,          # For /dev/fb[0-9]*
+  @{run}/udev/data/c90:@{int} r,          # For RAM, ROM, Flash
+  @{run}/udev/data/c116:@{int} r,         # For ALSA
+  @{run}/udev/data/c202:@{int} r,         # CPU model-specific registers
+  @{run}/udev/data/c226:@{int} r,         # For /dev/dri/card[0-9]*
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+  @{run}/udev/data/n@{int} r,
+
+  @{sys}/**/ r,
+  @{sys}/devices/@{pci}/vpd r,
+  @{sys}/devices/**/{class,revision,subsystem_vendor,subsystem_device} r,
+  @{sys}/devices/**/{config,device,vendor} r,
+  @{sys}/devices/**/uevent r,
+  @{sys}/devices/@{pci}/net/{,**} r,
+  @{sys}/devices/@{pci}/net/*/{duplex,address,speed,operstate} r,
+  @{sys}/devices/@{pci}/numa_node r,
+  @{sys}/devices/@{pci}/sriov_totalvfs r,
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node@{int}/meminfo r,
+  @{sys}/devices/virtual/dmi/id/{product_name,product_serial,product_uuid,sys_vendor,board_vendor,bios_vendor,bios_date,bios_version,product_version} r,
+  @{sys}/devices/virtual/net/{,**} r,
+  @{sys}/kernel/iommu_groups/ r,
+  @{sys}/kernel/iommu_groups/@{int}/devices/ r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/stat r,
+  owner @{PROC}/mtrr w,
+
+  include if exists <local/virtnodedevd>
+}

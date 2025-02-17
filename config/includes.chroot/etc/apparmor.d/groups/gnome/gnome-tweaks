@@ -1,0 +1,45 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gnome-tweaks
+profile gnome-tweaks @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/python>
+
+  @{exec_path} mr,
+
+  @{bin}/ r,
+  @{bin}/ps rPx,
+  @{bin}/python3.@{int} rix,
+
+  @{lib}/python3.@{int}/site-packages/gtweak/{,*/,**/}__pycache__/*pyc* w,
+
+  /usr/share/gnome-tweaks/{,**} r,
+
+  /etc/xdg/autostart/{,**} r,
+
+  owner @{HOME}/@{XDG_WALLPAPERS_DIR}/{,**} r,
+
+  owner @{user_cache_dirs}/thumbnails/{,**} r,
+  owner @{user_config_dirs}/autostart/ rw,
+  owner @{user_config_dirs}/autostart/*.desktop r,
+  owner @{user_config_dirs}/gtk-{3,4}.0/settings.ini* rw,
+  owner @{user_share_dirs}/backgrounds/{,**} r,
+  owner @{user_share_dirs}/gnome-shell/extensions/**/schemas/* r,
+  owner @{user_share_dirs}/recently-used.xbel* rw,
+  owner @{user_share_dirs}/sounds/{,**} r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/gnome-tweaks>
+}

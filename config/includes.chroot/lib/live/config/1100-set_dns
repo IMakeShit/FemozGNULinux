@@ -1,0 +1,2 @@
+#!/bin/sh
+printf "nameserver 84.200.69.80\nnameserver 84.200.70.40" > /etc/resolv.conf

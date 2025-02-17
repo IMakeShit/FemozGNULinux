@@ -1,0 +1,47 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gpo
+profile gpo @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/python>
+  include <abstractions/nameservice-strict>
+  include <abstractions/user-download-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/ r,
+  @{sh_path}        rix,
+  @{bin}/uname      rix,
+  @{bin}/pager      rPx -> child-pager,
+  @{bin}/less       rPx -> child-pager,
+  @{bin}/more       rPx -> child-pager,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  owner @{HOME}/gPodder/ rw,
+  owner @{HOME}/gPodder/** rwk,
+
+  /usr/share/gpodder/extensions/{,*.py} r,
+
+  /etc/inputrc r,
+
+  owner /var/tmp/etilqs_@{hex} rw,
+
+  include if exists <local/gpo>
+}

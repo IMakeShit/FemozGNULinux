@@ -1,0 +1,4 @@
+#!/bin/sh
+# Изолируем python
+# >:3
+LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --bind / / --unshare-pid --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --proc /proc --dev /dev /usr/bin/python3 "$@"

@@ -1,0 +1,79 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/etckeeper
+profile etckeeper @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  capability dac_read_search,
+  capability dac_override,
+
+  @{exec_path} mrix,
+
+  @{sh_path}            rix,
+  @{bin}/{,e}grep       rix,
+  @{bin}/cat            rix,
+  @{bin}/chmod          rix,
+  @{bin}/cut            rix,
+  @{bin}/diff           rix,
+  @{bin}/dpkg           rPx -> child-dpkg,
+  @{bin}/dpkg-query     rpx,
+  @{bin}/find           rix,
+  @{bin}/getent         rix,
+  @{bin}/git*           rix,
+  @{bin}/gpg{,2}        rCx -> gpg,
+  @{bin}/hostname       rix,
+  @{bin}/mkdir          rix,
+  @{bin}/mktemp         rix,
+  @{bin}/perl           rix,
+  @{bin}/ps             rPx,
+  @{bin}/rm             rix,
+  @{bin}/sed            rix,
+  @{bin}/sort           rix,
+  @{bin}/tail           rix,
+  @{bin}/tty            rix,
+  @{bin}/uniq           rix,
+  @{bin}/whoami         rix,
+  @{bin}/xargs          rix,
+  @{lib}/git{,-core}/git*  rix,
+
+  /etc/.git/hooks/*     rix,
+  /etc/etckeeper/*.d/*  rix,
+  /etc/etckeeper/daily  rix,
+
+  /etc/   rw,
+  /etc/** rwkl -> /etc/**,
+
+  /var/cache/etckeeper/{,**} rw,
+
+  owner @{HOME}/.gitconfig* r,
+  owner @{HOME}/.netrc r,
+  owner @{user_config_dirs}/git/{,*} rw,
+
+  owner /tmp/etckeeper-git* rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  profile gpg {
+    include <abstractions/base>
+    include <abstractions/consoles>
+
+    @{bin}/gpg{,2}     mr,
+    @{bin}/gpg-agent  rPx,
+
+    owner @{HOME}/@{XDG_GPG_DIR}/ rw,
+    owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+    owner @{PROC}/@{pid}/fd/ r,
+
+  }
+
+  include if exists <local/etckeeper>
+}

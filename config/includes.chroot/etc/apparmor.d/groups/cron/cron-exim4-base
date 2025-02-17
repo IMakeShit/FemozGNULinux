@@ -1,0 +1,57 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/cron.daily/exim4-base
+profile cron-exim4-base @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/authentication>
+  include <abstractions/consoles>
+
+  capability dac_read_search,
+  capability setgid,
+  capability setuid,
+  capability audit_write,
+  capability sys_ptrace,
+
+  ptrace (read),
+
+  network netlink raw,
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/sed        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/logger     rix,
+  @{bin}/mail       rix,
+  @{bin}/hostname   rix,
+  @{bin}/xargs      rix,
+  @{bin}/find       rix,
+  @{bin}/eximstats rix,
+
+  @{bin}/exim4     rPx,
+  @{bin}/exim_tidydb       rix,
+
+  @{bin}/start-stop-daemon rix,
+  @{bin}/runuser           rix,
+
+  /etc/default/exim4 r,
+
+  /var/spool/exim4/db/ r,
+  /var/spool/exim4/db/* rwk,
+
+        @{PROC}/ r,
+  owner @{PROC}/@{pid}/fd/ r,
+        @{PROC}/1/limits r,
+
+  @{etc_ro}/security/limits.d/ r,
+
+  include if exists <local/cron-exim4-base>
+}

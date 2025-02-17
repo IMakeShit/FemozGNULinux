@@ -1,0 +1,78 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-networkd
+profile systemd-networkd @{exec_path} flags=(attach_disconnected,complain) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.hostname1>
+  include <abstractions/systemd-common>
+
+  capability net_admin,
+  capability net_bind_service,
+  capability net_broadcast,
+  capability net_raw,
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet raw,
+  network inet6 raw,
+  network netlink raw,
+  network packet dgram,
+  network packet raw,
+
+  unix (bind) type=stream addr=@@{hex}/bus/systemd-network/bus-api-network,
+
+  # dbus: own bus=system name=org.freedesktop.network1
+
+  dbus send bus=system path=/org/freedesktop/hostname1
+       interface=org.freedesktop.hostname1
+       member=SetHostname
+       peer=(name=org.freedesktop.hostname1),
+  dbus send bus=system path=/org/freedesktop/hostname1
+       interface=org.freedesktop.hostname1
+       member=SetHostname
+       peer=(name=org.freedesktop.hostname1, label=systemd-hostnamed),
+
+  @{exec_path} mr,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /etc/systemd/networkd.conf r,
+  /etc/systemd/network/ r,
+  /etc/systemd/network/[0-9][0-9]-*.{netdev,network,link} r,
+
+  /etc/networkd-dispatcher/carrier.d/{,*} r,
+
+        @{run}/systemd/network/ r,
+        @{run}/systemd/network/*.network r,
+        @{run}/systemd/notify rw,
+  owner @{run}/systemd/netif/.#state rw,
+  owner @{run}/systemd/netif/.#state* rw,
+  owner @{run}/systemd/netif/leases/{,*} rw,
+  owner @{run}/systemd/netif/links/{,*} rw,
+  owner @{run}/systemd/netif/lldp/{,*} rw,
+  owner @{run}/systemd/netif/state rw,
+
+  @{run}/udev/data/n@{int} r,
+
+  @{sys}/devices/@{pci}/rfkill@{int}/* r,
+  @{sys}/devices/**/net/** r,
+  @{sys}/devices/@{pci}/ r,
+  @{sys}/devices/virtual/dmi/id/{sys,board,bios}_vendor r,
+  @{sys}/devices/virtual/dmi/id/product_name r,
+  @{sys}/devices/virtual/dmi/id/product_version r,
+
+  @{PROC}/@{pid}/cgroup r,
+  @{PROC}/pressure/* r,
+  @{PROC}/sys/net/ipv{4,6}/** rw,
+
+  include if exists <local/systemd-networkd>
+}

@@ -1,0 +1,28 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xembedsniproxy
+profile xembedsniproxy @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/fonts>
+  include <abstractions/nameservice-strict>
+  include <abstractions/qt5>
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+
+  @{exec_path} mr,
+
+  /usr/share/hwdata/*.ids r,
+  /usr/share/icu/@{int}.@{int}/*.dat r,
+
+  owner /tmp/xauth_@{rand6} r,
+
+  @{run}/user/@{uid}/xauth_@{rand6} rl,
+
+  include if exists <local/xembedsniproxy>
+}

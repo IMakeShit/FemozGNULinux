@@ -1,0 +1,17 @@
+## Copyright (C) 2015 - 2025 ENCRYPTED SUPPORT LLC <adrelanos@whonix.org>
+## See the file COPYING for copying conditions.
+
+#### meta start
+#### project Whonix
+#### category tor and security
+#### gateway_only yes
+#### description
+## apparmor relaxations for obfsproxy
+#### meta end
+
+  ## Qubes-Whonix.
+  /rw/usrlocal/lib/python*/dist-packages/ r,
+
+  /var/lib/tor/pt_state/ rwk,
+  /var/lib/tor/pt_state/scramblesuit/ rwk,
+  /var/lib/tor/pt_state/scramblesuit/* rwk,

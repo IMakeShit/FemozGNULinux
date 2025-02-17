@@ -1,0 +1,102 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/virt-manager
+@{exec_path} += /usr/share/virt-manager/virt-manager
+profile virt-manager @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/dconf-write>
+  include <abstractions/desktop>
+  include <abstractions/devices-usb>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+  include <abstractions/ssl_certs>
+  include <abstractions/thumbnails-cache-read>
+  include <abstractions/user-download-strict>
+
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} rix,
+
+  @{sh_path}        rix,
+  @{bin}/python3.@{int} r,
+  @{lib}/python3.@{int}/site-packages/__pycache__/guestfs.cpython-@{int}.pyc.@{int} w,
+
+  @{bin}/ r,
+  @{bin}/env       rix,
+  @{bin}/getfacl   rix,
+  @{bin}/setfacl   rix,
+
+  @{bin}/libvirtd                          rPx,
+  @{bin}/ssh                               rPx,
+  @{lib}/spice-client-glib-usb-acl-helper  rPx,
+
+  @{open_path}     rPx -> child-open,
+
+  /usr/share/gtksourceview-4/{,**} r,
+  /usr/share/hwdata/*.ids r,
+  /usr/share/ladspa/rdf/{,ladspa.rdfs} r,
+  /usr/share/misc/*.ids r,
+  /usr/share/osinfo/{,**} r,
+  /usr/share/pci.ids r,
+  /usr/share/virt-manager/{,**} r,
+  /usr/share/virtio/{,*} r,
+  /var/lib/usbutils/*.ids r,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /etc/fstab r,
+  /etc/libnl/classid r,
+
+  owner @{HOME}/ r,
+  owner @{user_cache_dirs}/virt-manager/{,**} rw,
+
+  # For disk images
+  @{MOUNTS}/ r,
+  @{user_img_dirs}/{,**} r,
+
+  # System VM images
+  /var/lib/libvirt/images/{,**} rw,
+
+  # User VM images
+  owner @{user_share_dirs}/ r,
+  owner @{user_share_dirs}/libvirt/{,**} rw,
+  owner @{user_vm_dirs}/{,**} rw,
+
+  owner @{run}/user/@{uid}/libvirt/libvirtd.lock rwk,
+  owner @{run}/user/@{uid}/libvirt/virtqemud.lock rwk,
+
+  @{run}/mount/utab r,
+  @{run}/udev/data/c@{dynamic}:@{int} r,  # For dynamic assignment range 234 to 254, 384 to 511
+
+  @{sys}/devices/**/hwmon/**/{,name,temp*,fan*} r,
+  @{sys}/devices/virtual/drm/ttm/uevent r,
+
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/fd/ r,
+        @{PROC}/@{pids}/net/route r,
+
+  /dev/media@{int} r,
+  /dev/video@{int} rw,
+
+  # Silence the noise
+  deny /usr/share/virt-manager/{,**} w,
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/virt-manager>
+}

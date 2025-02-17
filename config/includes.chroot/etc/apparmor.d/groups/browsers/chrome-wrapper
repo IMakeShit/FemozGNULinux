@@ -1,0 +1,40 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{lib_dirs} = /opt/google/chrome{,-beta,-unstable}
+
+@{exec_path} = @{lib_dirs}/google-chrome{,-beta,-unstable}
+profile chrome-wrapper @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} r,
+
+  @{sh_path}                   rix,
+  @{bin}/cat                   rix,
+  @{bin}/dirname               rix,
+  @{bin}/mkdir                 rix,
+  @{bin}/readlink              rix,
+  @{bin}/touch                 rix,
+  @{bin}/which{,.debianutils}  rix,
+
+  @{lib_dirs}/chrome   rPx,
+
+  owner @{user_config_dirs}/chrome-flags.conf r,
+
+  owner @{PROC}/@{pid}/fd/* rw,
+
+  # File Inherit
+  owner @{HOME}/.xsession-errors w,
+
+  # Silencer
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/chrome-wrapper>
+}

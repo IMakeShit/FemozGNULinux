@@ -1,0 +1,131 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/{c,}vlc
+profile vlc @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.ScreenSaver>
+  include <abstractions/dconf-write>
+  include <abstractions/desktop>
+  include <abstractions/devices-usb>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/graphics>
+  include <abstractions/gstreamer>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-download-strict>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  dbus bind bus=session name=org.kde.StatusNotifierItem-*,
+
+  dbus bind bus=session name=org.mpris.MediaPlayer2.vlc*,
+  dbus (send, receive) bus=session path=/org/mpris/MediaPlayer2
+       interface=org.freedesktop.DBus.Properties
+       peer=(name="{org.freedesktop.DBus,:*}"), # all members
+  dbus (send, receive) bus=session path=/org/mpris/MediaPlayer2
+       interface=org.mpris.MediaPlayer2.*
+       peer=(name="{org.mpris.MediaPlayer2.vlc,org.freedesktop.DBus,:*}"), # all members
+
+  dbus send bus=session path=/StatusNotifierWatcher
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=org.kde.StatusNotifierWatcher),
+
+  dbus send bus=session path=/StatusNotifierWatcher
+       interface=org.freedesktop.DBus.Properties
+       member={Get,RegisterStatusNotifierItem}
+       peer=(name=org.kde.StatusNotifierWatcher),
+
+  dbus send bus=session path=/StatusNotifierWatcher
+       interface=org.kde.StatusNotifierWatcher
+       member=RegisterStatusNotifierItem
+       peer=(name=org.kde.StatusNotifierWatcher),
+
+  dbus send bus=session path=/StatusNotifierItem 
+       interface=org.kde.StatusNotifierItem
+       member={NewToolTip,NewStatus,NewAttentionIcon,NewTitle,NewStatus,NewIcon}
+       peer=(name=org.freedesktop.DBus),
+
+  dbus receive bus=session path=/StatusNotifierItem 
+       interface=org.kde.StatusNotifierItem
+       member=Activate
+       peer=(name=:*),
+
+  dbus receive bus=session path=/StatusNotifierItem
+       interface=org.freedesktop.DBus.Properties
+       member={Get,GetAll}
+       peer=(name=:*),
+
+  dbus send bus=session path=/MenuBar
+       interface=com.canonical.dbusmenu
+       member={LayoutUpdated,ItemsPropertiesUpdated}
+       peer=(name=org.freedesktop.DBus),
+
+  dbus (send receive) bus=session path=/MenuBar
+       interface=com.canonical.dbusmenu
+       peer=(name=:*),
+
+  @{exec_path} mrix,
+
+  @{bin}/xdg-screensaver rPx,
+
+  /usr/share/hwdata/pnp.ids r,
+  /usr/share/qt5ct/** r,
+  /usr/share/vlc/{,**} r,
+
+  /etc/fstab r,
+
+  owner @{HOME}/ r,
+  owner @{user_music_dirs}/{,**} rw,
+  owner @{user_pictures_dirs}/{,**} rw,
+  owner @{user_torrents_dirs}/{,**} rw,
+  owner @{user_videos_dirs}/{,**} rw,
+
+  owner @{user_cache_dirs}/#@{int} rw,
+  owner @{user_cache_dirs}/vlc/ rw,
+  owner @{user_cache_dirs}/vlc/{,**} rw,
+
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+  owner @{user_config_dirs}/vlc/ rw,
+  owner @{user_config_dirs}/vlc/** rwkl -> @{user_config_dirs}/vlc/#@{int},
+
+  owner @{user_share_dirs}/vlc/{,**} rw,
+
+  owner @{run}/user/@{uid}/gvfs/smb-share:server=*,share=**/ r,
+  owner @{run}/user/@{uid}/gvfs/smb-share:server=*,share=** r,
+
+        @{PROC}/@{pids}/net/if_inet6 r,
+        @{PROC}/sys/kernel/random/boot_id r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+        /dev/shm/#@{int} rw,
+        /dev/snd/ r,
+        /dev/tty r,
+        /dev/video@{int} rw,
+  owner /dev/tty@{int} rw,
+
+  # Silencer
+  deny @{lib}/@{multiarch}/vlc/{,**} w,
+  deny @{user_share_dirs}/gvfs-metadata/{*,} r,
+
+  include if exists <local/vlc>
+}

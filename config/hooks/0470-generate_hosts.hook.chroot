@@ -1,0 +1,6 @@
+#!/bin/bash
+# Настройка файла hosts для блокировки трекеров,мусора и рекламы на уровне системы
+curl https://raw.githubusercontent.com/StevenBlack/hosts/refs/heads/master/hosts > /etc/hosts
+curl https://raw.githubusercontent.com/IMakeShit/FemozHosts/refs/heads/main/hosts >> /etc/hosts
+echo "127.0.0.1 devuan" >> /etc/hosts
+sed -i '/^$/d' /etc/hosts

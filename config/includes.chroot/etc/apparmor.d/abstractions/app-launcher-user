@@ -1,0 +1,30 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+  @{bin}/*                      rPUx,
+  /opt/*/**                     rPUx,
+  /usr/share/*/*                rPUx,
+  /usr/local/bin/*              rPUx,
+
+  # Browsers
+  @{bin}/chromium               rPx,
+  @{brave_path}                 rPx,
+  @{chrome_path}                rPx,
+  @{chromium_path}              rPx,
+  @{firefox_path}               rPx,
+  @{opera_path}                 rPx,
+
+  # Emails
+  @{thunderbird_path}           rPx,
+
+  # Office
+  @{lib}/libreoffice/program/{soffice{,.bin},oosplash} rPUx,
+
+  @{bin}/                       r,
+  /                             r,
+  /usr/                         r,
+  /usr/local/bin/               r,
+
+  include if exists <abstractions/app-launcher-user.d>

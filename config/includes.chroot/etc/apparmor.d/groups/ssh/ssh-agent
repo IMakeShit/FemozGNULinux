@@ -1,0 +1,47 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ssh-agent
+profile ssh-agent @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  signal (receive) set=(cont term) peer=@{systemd_user},
+  signal (receive) set=term peer=cockpit-bridge,
+  signal (receive) set=term peer=gnome-keyring-daemon,
+
+  @{exec_path} mr,
+
+  @{sh_path}                   rix,
+  @{bin}/enlightenment_start  rPUx,
+  @{bin}/gpg-agent             rPx,
+  @{bin}/im-launch            rPUx,
+  @{bin}/kwalletaskpass       rPUx,
+  @{bin}/openbox-session       rPx,
+  @{bin}/startkde             rPUx,
+  @{bin}/startxfce4           rPUx,
+  @{bin}/sway                 rPUx,
+
+  owner @{HOME}/@{XDG_SSH_DIR}/ rw,
+  owner @{HOME}/@{XDG_SSH_DIR}/* r,
+  owner @{HOME}/.xsession-errors w,
+  owner @{user_projects_dirs}/**/ssh/{,*} r,
+
+  owner /tmp/ssh-*/ rw,
+  owner /tmp/ssh-*/agent.* rw,
+
+  @{run}/user/@{uid}/openssh_agent rw,
+  @{run}/user/@{uid}/keyring/.ssh rw,
+  @{run}/user/@{uid}/ssh-agent.[0-9A-Z]* w,
+
+  /dev/tty@{int} rw,
+
+  include if exists <local/ssh-agent>
+}

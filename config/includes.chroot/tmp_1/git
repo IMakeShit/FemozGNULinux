@@ -1,0 +1,2 @@
+#!/bin/sh
+LB_PRELOAD="/usr/lib/libhardened_malloc.so" exec /usr/bin/torsocks --isolate /usr/bin/git "$@"

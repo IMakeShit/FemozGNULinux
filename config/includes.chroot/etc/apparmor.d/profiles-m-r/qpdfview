@@ -1,0 +1,75 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/qpdfview
+profile qpdfview @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dri-enumerate>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/qt5-compose-cache-write>
+  include <abstractions/qt5-settings-write>
+  include <abstractions/thumbnails-cache-read>
+  include <abstractions/user-download-strict>
+  include <abstractions/X>
+
+  @{exec_path} mr,
+
+  # For PDF's internal compression
+  @{bin}/gzip     rix,
+  @{bin}/bzip2    rix,
+  @{bin}/xz       rix,
+
+  @{lib}/firefox/firefox rPUx,
+  @{open_path}           rPx -> child-open,
+
+  /usr/share/hwdata/pnp.ids r,
+  /usr/share/poppler/** r,
+  /usr/share/qt5ct/** r,
+  /usr/share/djvu/** r,
+
+  /etc/fstab r,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  owner @{HOME}/ r,
+  owner @{user_documents_dirs}/{,**} rw,
+  owner @{user_books_dirs}/{,**} rw,
+  owner @{user_torrents_dirs}/{,**} rw,
+  owner @{user_work_dirs}/{,**} rw,
+
+  owner @{user_config_dirs}/qpdfview/ rw,
+  owner @{user_config_dirs}/qpdfview/* rwkl -> @{user_config_dirs}/qpdfview/#@{int},
+
+  owner @{user_share_dirs}/qpdfview/ rw,
+  owner @{user_share_dirs}/qpdfview/** rwk,
+
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+
+  owner /dev/shm/#@{int} rw,
+  owner /tmp/@{hex} rw,
+  owner /tmp/#@{int} rw,
+  owner /tmp/qpdfview.*.pdf rwl -> /tmp/#@{int},
+
+       owner @{PROC}/@{pid}/mountinfo r,
+       owner @{PROC}/@{pid}/mounts r,
+  deny       @{PROC}/sys/kernel/random/boot_id r,
+  deny owner @{PROC}/@{pid}/cmdline r,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/qpdfview>
+}
+
+

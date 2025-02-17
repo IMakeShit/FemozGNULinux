@@ -1,0 +1,10 @@
+#!/bin/bash
+sed -i 's,^\(\#\?\s*deb\(-src\)\?\s\+\)http://,\1tor+https://,' \
+           /etc/apt/sources.list /etc/apt/sources.list.d/*.list
+
+mkdir /run/sdwdate
+mkdir /var/lib/sdwdate
+mkdir /var/lib/sdwdate-forbidden-temp
+chmod a+rw /run/sdwdate
+chmod a+rw /var/lib/sdwdate
+chmod a+rw /var/lib/sdwdate-forbidden-temp

@@ -1,0 +1,54 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ssh
+profile ssh @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  signal (receive) set=(term) peer=gnome-keyring-daemon,
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  @{exec_path} mrix,
+
+  @{bin}/{,b,d,rb}ash  rix,
+  @{bin}/{c,k,tc,z}sh  rix,
+
+  @{etc_ro}/ssh/ssh_config r,
+  @{etc_ro}/ssh/sshd_config r,
+  @{etc_ro}/ssh/sshd_config.d/{,*} r,
+  /etc/machine-id r,
+  /etc/ssh/ssh_config r,
+  /etc/ssh/ssh_config.d/{,*} r,
+  
+  owner @{HOME}/@{XDG_SSH_DIR}/ r,
+  owner @{HOME}/@{XDG_SSH_DIR}/*_*{,.pub} r,
+  owner @{HOME}/@{XDG_SSH_DIR}/config r,
+  owner @{HOME}/@{XDG_SSH_DIR}/known_hosts{,.*} rwl,
+  owner @{HOME}/@{XDG_SSH_DIR}/ssh_control_*_*_* wl,
+
+  owner @{user_projects_dirs}/**/ssh/{,*} r,
+  owner @{user_projects_dirs}/**/config r,
+
+  owner /tmp/ssh-*/{,agent.@{int}} rwkl,
+
+  owner @{run}/user/@{uid}/keyring/ssh rw,
+
+  owner @{PROC}/@{pid}/loginuid r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/ssh>
+}

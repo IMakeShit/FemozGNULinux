@@ -1,0 +1,73 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/apt/apt.systemd.daily
+profile apt-systemd-daily @{exec_path} {
+  include <abstractions/base>
+
+  capability dac_read_search,
+
+  @{exec_path} mrix,
+  @{sh_path}        rix,
+
+  @{bin}/basename   rix,
+  @{bin}/cmp        rix,
+  @{bin}/cp         rix,
+  @{bin}/date       rix,
+  @{bin}/dirname    rix,
+  @{bin}/du         rix,
+  @{bin}/env        rix,
+  @{bin}/find       rix,
+  @{bin}/flock      rix,
+  @{bin}/grep       rix,
+  @{bin}/gzip       rix,
+  @{bin}/ls         rix,
+  @{bin}/mv         rix,
+  @{bin}/rm         rix,
+  @{bin}/savelog    rix,
+  @{bin}/seq        rix,
+  @{bin}/sort       rix,
+  @{bin}/stat       rix,
+  @{bin}/touch      rix,
+  @{bin}/uniq       rix,
+  @{bin}/wc         rix,
+  @{bin}/which{,.debianutils}      rix,
+  @{bin}/xargs      rix,
+
+  @{bin}/apt-config         rPx,
+  @{bin}/apt-get            rPx,
+  @{bin}/apt-overlay        rPx,
+  @{bin}/unattended-upgrade rPx,
+
+  /etc/default/locale    r,
+
+  / r,
+
+  # The /daily_lock file is only used when the /var/lib/apt/daily_lock can be accessed.
+  #/daily_lock w,
+  /var/lib/apt/daily_lock wk,
+
+  /var/lib/apt/extended_states r,
+  /var/lib/apt/periodic/* w,
+
+  /var/backups/ r,
+  /var/backups/apt.extended_states rw,
+  /var/backups/apt.extended_states.@{int} rw,
+  /var/backups/apt.extended_states.@{int}.gz w,
+
+  /var/cache/apt/ r,
+  /var/cache/apt/archives/ r,
+  /var/cache/apt/archives/partial/ r,
+  /var/cache/apt/archives/*.deb rw,
+  /var/cache/apt/backup/ r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/apt-systemd-daily>
+}

@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/flatpak-session-helper
+profile flatpak-session-helper @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/p11-kit>
+  include <abstractions/ssl_certs>
+
+  signal (send) set=(int) peer=@{systemd},
+
+  @{exec_path} mr,
+
+  @{bin}/dbus-monitor                 rPUx,
+  @{bin}/p11-kit                       rix,
+  @{bin}/pkexec                        rPx,
+  @{lib}/p11-kit/p11-kit-remote        rix,
+  @{lib}/p11-kit/p11-kit-server        rix,
+  /var/lib/flatpak/app/*/**/@{bin}/**  rPx -> flatpak-app,
+  /var/lib/flatpak/app/*/**/@{lib}/**  rPx -> flatpak-app,
+
+  owner @{run}/user/@{uid}/.flatpak-helper/{,**} rw,
+  owner @{run}/user/@{uid}/.flatpak-helper/pkcs11-flatpak-@{int} rw,
+  
+  owner @{PROC}/@{pids}/fd/ r,
+
+  include if exists <local/flatpak-session-helper>
+}

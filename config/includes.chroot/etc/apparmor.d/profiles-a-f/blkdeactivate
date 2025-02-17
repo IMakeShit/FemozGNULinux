@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022 Jeroen Rijken
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/blkdeactivate
+profile blkdeactivate @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} rm,
+
+  @{bin}/dmsetup        rPUx,
+  @{bin}/grep            rix,
+  @{bin}/lsblk           rPx,
+  @{bin}/lvm             rPx,
+  @{bin}/multipathd      rPx,
+  @{bin}/sort            rix,
+  @{bin}/umount          rPx,
+
+  @{sys}/devices/virtual/block/*/holders/ r,
+
+  /dev/tty rw,
+
+  include if exists <local/blkdeactivate>
+}
+

@@ -1,0 +1,212 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# For chromium based browser. If your application requires chromium to run
+# (like electron) use abstractions/chromium-common instead.
+
+# This abstraction requires the following variables definied in the profile header:
+# @{name} = chromium
+# @{domain} = org.chromium.Chromium
+# @{lib_dirs} = @{lib}/chromium
+# @{config_dirs} = @{user_config_dirs}/chromium
+# @{cache_dirs} = @{user_cache_dirs}/chromium
+
+  include <abstractions/audio>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.UPower>
+  include <abstractions/dconf-write>
+  include <abstractions/desktop>
+  include <abstractions/devices-usb>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/graphics-full>
+  include <abstractions/nameservice-strict>
+  include <abstractions/ssl_certs>
+  include <abstractions/thumbnails-cache-read>
+  include <abstractions/uim>
+  include <abstractions/user-download-strict>
+  include <abstractions/user-read>
+  include <abstractions/video>
+
+  # userns,
+
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+  capability sys_chroot,
+  capability sys_ptrace,
+
+  ptrace (read) peer=browserpass,
+  ptrace (read) peer=chrome-gnome-shell,
+  ptrace (read) peer=gnome-browser-connector-host,
+  ptrace (read) peer=keepassxc-proxy,
+  ptrace (read) peer=lsb_release,
+  ptrace (read) peer=xdg-settings,
+  ptrace (trace) peer=@{profile_name},
+
+  signal (receive) peer=@{profile_name}-crashpad-handler,
+  signal (send) set=(term, kill) peer=@{profile_name}-sandbox,
+  signal (send) set=(term, kill) peer=keepassxc-proxy,
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  dbus send bus=system path=/
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=org.bluez, label=bluetoothd),
+
+  @{lib_dirs}/{,**} r,
+  @{lib_dirs}/*.so* mr,
+  @{lib_dirs}/chrome_crashpad_handler  rPx,
+  @{lib_dirs}/chrome-sandbox           rPx,
+
+  # Desktop integration
+  @{bin}/lsb_release        rPx -> lsb_release,
+  @{bin}/xdg-desktop-menu   rPx,
+  @{bin}/xdg-email          rPx,
+  @{bin}/xdg-icon-resource  rPx,
+  @{bin}/xdg-mime           rPx,
+  @{bin}/xdg-open           rPx -> child-open,
+  @{bin}/xdg-settings       rPx,
+
+  # Installing/removing extensions & applications
+  @{bin}/{,e}grep rix,
+  @{bin}/basename rix,
+  @{bin}/cat      rix,
+  @{bin}/cut      rix,
+  @{bin}/mkdir    rix,
+  @{bin}/mktemp   rix,
+  @{bin}/rm       rix,
+  @{bin}/sed      rix,
+  @{bin}/touch    rix,
+
+  # For storing passwords externally
+  @{bin}/keepassxc-proxy    rix, # as a temporary solution - see issue #128
+  @{bin}/browserpass        rPx,
+
+  # Gnome shell integration
+  @{bin}/chrome-gnome-shell            rPx,
+  @{bin}/gnome-browser-connector-host  rPx,
+
+  # Plasma integration
+  @{bin}/plasma-browser-integration-host rPx,
+
+  /usr/share/@{name}/{,**} r,
+  /usr/share/chromium/extensions/{,**} r,
+  /usr/share/egl/{,**} r,
+  /usr/share/hwdata/pnp.ids r,
+  /usr/share/mozilla/extensions/{,**} r,
+  /usr/share/qt{5,}/translations/*.qm r,
+  /usr/share/webext/{,**} r,
+
+  /etc/@{name}/{,**} r,
+  /etc/fstab r,
+  /etc/igfx_user_feature{,_next}.txt rw,
+  /etc/opensc.conf r,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  owner @{HOME}/ r,
+
+  owner @{HOME}/.pki/ rw,
+  owner @{HOME}/.pki/nssdb/ rw,
+  owner @{HOME}/.pki/nssdb/pkcs11.txt rw,
+  owner @{HOME}/.pki/nssdb/{cert9,key4}.db rwk,
+  owner @{HOME}/.pki/nssdb/{cert9,key4}.db-journal rw,
+
+  owner @{user_config_dirs}/gtk-3.0/servers r,
+  owner @{user_share_dirs}/.@{domain}.* rw,
+  owner @{user_cache_dirs}/gtk-3.0/**/*.cache r,
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+
+  owner @{config_dirs}/ rw,
+  owner @{config_dirs}/** rwk,
+  owner @{config_dirs}/WidevineCdm/*/_platform_specific/linux_*/libwidevinecdm.so mrw,
+  owner @{user_config_dirs}/kdedefaults/ r,
+  owner @{user_config_dirs}/kdedefaults/kdeglobals r,
+  owner @{user_config_dirs}/kdedefaults/kwinrc r,
+  owner @{user_config_dirs}/kdeglobals r,
+  owner @{user_config_dirs}/kwinrc r,
+
+  owner @{cache_dirs}/{,**} rw,
+
+  # For importing data (bookmarks, cookies, etc) from Firefox
+  # owner @{HOME}/.mozilla/firefox/profiles.ini r,
+  # owner @{HOME}/.mozilla/firefox/*/ r,
+  # owner @{HOME}/.mozilla/firefox/*/compatibility.ini r,
+  # owner @{HOME}/.mozilla/firefox/*/search{,-metadata}.json r,
+  # owner @{HOME}/.mozilla/firefox/*/.parentlock rwk,
+  # owner @{HOME}/.mozilla/firefox/*/{places,cookies,favicons,formhistory,}.sqlite{,-wal,-shm,-journal} rwk,
+  # owner @{HOME}/.mozilla/firefox/*/{cert9,key4}.db rwk,
+  # owner @{HOME}/.mozilla/firefox/*/logins.json r,
+
+        /tmp/ r,
+        /var/tmp/ r,
+  owner /tmp/.@{domain}.* rw,
+  owner /tmp/.@{domain}*/{,**} rw,
+  owner /tmp/@{name}-crashlog-@{int}-@{int}.txt rw,
+  owner /tmp/scoped_dir*/{,**} rw,
+  owner /tmp/tmp.* rw,
+  owner /tmp/tmp.*/ rw,
+  owner /tmp/tmp.*/** rwk,
+
+        /dev/shm/ r,
+  owner /dev/shm/.@{domain}* rw,
+
+  @{run}/udev/data/c13:@{int}  r,         # for /dev/input/*
+
+  owner @{run}/user/@{uid}/app/org.keepassxc.KeePassXC/org.keepassxc.KeePassXC.BrowserServer rw,
+  owner @{run}/user/@{uid}/org.keepassxc.KeePassXC.BrowserServer rw,
+
+  @{sys}/bus/ r,
+  @{sys}/bus/**/devices/ r,
+  @{sys}/class/**/ r,
+  @{sys}/devices/@{pci}/{in_intensity_sampling_frequency,in_intensity_scale,in_illuminance_raw} r,
+  @{sys}/devices/@{pci}/boot_vga r,
+  @{sys}/devices/@{pci}/report_descriptor r,
+  @{sys}/devices/**/uevent r,
+  @{sys}/devices/system/cpu/kernel_max r,
+  @{sys}/devices/virtual/**/report_descriptor r,
+  @{sys}/devices/virtual/dmi/id/{sys_vendor,product_name} r,
+  @{sys}/devices/virtual/tty/tty@{int}/active r,
+
+        @{PROC}/ r,
+        @{PROC}/@{pid}/fd/ r,
+        @{PROC}/@{pids}/stat r,
+        @{PROC}/@{pids}/statm r,
+        @{PROC}/@{pids}/task/@{tid}/stat r,
+        @{PROC}/@{pids}/task/@{tid}/status r,
+        @{PROC}/pressure/{memory,cpu,io} r,
+        @{PROC}/sys/fs/inotify/max_user_watches r,
+        @{PROC}/sys/kernel/yama/ptrace_scope r,
+        @{PROC}/vmstat r,
+  owner @{PROC}/@{pid}/gid_map w,
+  owner @{PROC}/@{pid}/limits r,
+  owner @{PROC}/@{pid}/mem r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/oom_{,score_}adj rw,
+  owner @{PROC}/@{pid}/setgroups w,
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+  owner @{PROC}/@{pid}/uid_map w,
+  owner @{PROC}/@{pids}/clear_refs w,
+  owner @{PROC}/@{pids}/cmdline r,
+  owner @{PROC}/@{pids}/environ r,
+  owner @{PROC}/@{pids}/task/ r,
+
+        /dev/ r,
+        /dev/hidraw@{int} rw,
+        /dev/tty rw,
+  owner /dev/tty@{int} rw,
+
+  # Silencer
+  deny @{lib_dirs}/** w,
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <abstractions/chromium.d>

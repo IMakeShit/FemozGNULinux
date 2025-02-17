@@ -1,0 +1,90 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/apt-cdrom
+profile apt-cdrom @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/nameservice-strict>
+
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{bin}/dpkg        rPx -> child-dpkg,
+
+  @{bin}/mount       rCx -> mount,
+  @{bin}/umount      rCx -> umount,
+
+  /etc/fstab r,
+
+  # Are all of these needed? (#FIXME#)
+  @{sys}/bus/ r,
+  @{sys}/bus/*/devices/ r,
+  @{sys}/class/ r,
+  @{sys}/class/*/ r,
+  @{sys}/devices/**/uevent r,
+  # @{run}/udev/data/* r,
+
+  # For cd-roms
+  /media/cdrom[0-9]/ r,
+  /media/cdrom[0-9]/**/ r,
+  /media/cdrom[0-9]/.disk/info r,
+  /media/cdrom[0-9]/dists/**/binary-*/Packages{,.gz} r,
+  /media/cdrom[0-9]/dists/**/i18n/Translation-en{,.gz} r,
+
+  # For pendrives
+  @{MOUNTS}/ r,
+  @{MOUNTS}/**/ r,
+  @{MOUNTS}/.disk/info r,
+  @{MOUNTS}/dists/**/binary-*/Packages{,.gz} r,
+  @{MOUNTS}/dists/**/i18n/Translation-en{,.gz} r,
+
+  /var/lib/apt/lists/** rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  /var/lib/apt/cdroms.list{,.new} rw,
+  /var/lib/apt/cdroms.list~ w,
+
+  /etc/apt/sources.list{,.new} rw,
+  /etc/apt/sources.list~ w,
+
+  profile mount flags=(complain) {
+    include <abstractions/base>
+
+    @{bin}/mount mr,
+
+    /etc/fstab r,
+
+    /media/cdrom[0-9]/ r,
+
+    include if exists <local/apt-cdrom_mount>
+  }
+
+  profile umount flags=(complain) {
+    include <abstractions/base>
+
+    capability sys_admin,
+
+    @{bin}/umount mr,
+
+    @{run}/mount/utab{,.*} rw,
+    @{run}/mount/utab.lock rwk,
+
+    owner @{PROC}/@{pid}/mountinfo r,
+
+    umount /media/*/,
+    umount /media/*/*/,
+
+    include if exists <local/apt-cdrom_umount>
+  }
+
+  include if exists <local/apt-cdrom>
+}

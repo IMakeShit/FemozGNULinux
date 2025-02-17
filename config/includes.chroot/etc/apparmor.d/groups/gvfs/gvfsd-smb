@@ -1,0 +1,29 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gvfs/}gvfsd-smb
+profile gvfsd-smb @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+  include <abstractions/freedesktop.org>
+
+  network netlink raw,
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  @{exec_path} mr,
+
+  /etc/samba/smb.conf r,
+
+  owner @{run}/user/@{uid}/gvfsd/socket-@{rand8} rw,
+
+  include if exists <local/gvfsd-smb>
+}

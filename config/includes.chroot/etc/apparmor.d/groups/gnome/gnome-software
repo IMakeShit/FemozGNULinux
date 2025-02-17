@@ -1,0 +1,151 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gnome-software
+profile gnome-software @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/p11-kit>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  mount fstype=fuse.revokefs-fuse options=(rw, nosuid, nodev) -> /var/tmp/flatpak-cache-*/*/,
+  umount /var/tmp/flatpak-cache-*/*/,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  @{exec_path} mr,
+
+  @{bin}/baobab              rPUx,
+  @{bin}/bwrap               rPUx,
+  @{bin}/fusermount{,3}      rCx -> fusermount,
+  @{bin}/gpg{,2}             rCx -> gpg,
+  @{bin}/gpgconf             rCx -> gpg,
+  @{bin}/gpgsm               rCx -> gpg,
+  @{lib}/revokefs-fuse       rix,
+  @{open_path}               rPx -> child-open,
+
+  /usr/share/app-info/{,**} r,
+  /usr/share/appdata/{,**} r,
+  /usr/share/metainfo/{,**} r,
+  /usr/share/swcatalog/{,**} r,
+  /usr/share/xml/iso-codes/{,**} r,
+
+  /etc/appstream.conf r,
+  /etc/flatpak/remotes.d/{,**} r,
+  /etc/PackageKit/Vendor.conf r,
+  /etc/pulse/client.conf r,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /var/cache/app-info/icons/**.png r,
+  /var/cache/app-info/xmls/{,**} r,
+
+  /var/lib/apt/lists/*.yml.gz r,
+
+  /var/lib/flatpak/app/{,**} r,
+  /var/lib/flatpak/appstream/{,**} r,
+  /var/lib/flatpak/repo/{,**} r,
+  /var/lib/flatpak/runtime/{,**} r,
+  
+  /var/lib/PackageKit/offline-update-competed r,
+  /var/lib/PackageKit/prepared-update r,
+  /var/lib/swcatalog/icons/**.png r,
+  /var/lib/swcatalog/yaml/ r,
+
+  /var/tmp/flatpak-cache-*/ rw,
+  /var/tmp/flatpak-cache-*/** rwkl,
+  /var/tmp/#@{int} rw,
+
+  owner @{HOME}/.var/app/{,**} rw,
+
+  owner @{user_cache_dirs}/flatpak/{,**} rwl,
+  owner @{user_cache_dirs}/gnome-software/{,**} rw,
+
+  owner @{user_config_dirs}/pulse/*.conf r,
+
+  owner @{user_share_dirs}/ r,
+  owner @{user_share_dirs}/flatpak/.changed w,
+  owner @{user_share_dirs}/flatpak/repo/ rw,
+  owner @{user_share_dirs}/flatpak/repo/** rwl -> @{user_share_dirs}/flatpak/repo/**,
+  owner @{user_share_dirs}/gnome-software/{,**} rw,
+
+  owner /tmp/ostree-gpg-*/ rw,
+  owner /tmp/ostree-gpg-*/** rwkl -> /tmp/ostree-gpg-*/**,
+  owner /tmp/#@{int} rw,
+
+  owner @{run}/user/@{uid}/.dbus-proxy/ rw,
+  owner @{run}/user/@{uid}/.dbus-proxy/a11y-bus-proxy-@{rand6} rw,
+  owner @{run}/user/@{uid}/.dbus-proxy/session-bus-proxy-@{rand6} rw,
+  owner @{run}/user/@{uid}/.flatpak-cache rw,
+  owner @{run}/user/@{uid}/.flatpak/{,**} rw,
+  owner @{run}/user/@{uid}/.flatpak/**/*.ref rwk,
+  owner @{run}/user/@{uid}/app/{,*/} rw,
+
+  @{run}/systemd/inhibit/*.ref rw,
+
+  @{sys}/module/nvidia/version r,
+
+        @{PROC}/@{pids}/mounts r,
+        @{PROC}/sys/fs/pipe-max-size r,
+        @{PROC}/sys/kernel/random/boot_id r,
+        @{PROC}/sys/net/ipv6/conf/all/disable_ipv6 r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fdinfo/@{int} r,
+  owner @{PROC}/@{pid}/stat r,
+
+  /dev/fuse rw,
+ 
+  profile gpg {
+    include <abstractions/base>
+
+    @{bin}/gpg{,2}  mr,
+    @{bin}/gpgconf  mr,
+    @{bin}/gpgsm    mr,
+
+    @{HOME}/@{XDG_GPG_DIR}/*.conf r,
+
+    owner /tmp/ostree-gpg-*/ r,
+    owner /tmp/ostree-gpg-*/** rwkl -> /tmp/ostree-gpg-*/**,
+
+    include if exists <local/gnome-software_gpg>
+  }
+
+  profile fusermount {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    capability sys_admin,
+
+    mount fstype=fuse.revokefs-fuse options=(rw, nosuid, nodev) -> /var/tmp/flatpak-cache-*/*/,
+    umount /var/tmp/flatpak-cache-*/*/,
+
+    @{bin}/fusermount{,3} mr,
+
+    /etc/fuse.conf r,
+
+    @{PROC}/@{pids}/mounts r,
+
+    /dev/fuse rw,
+
+    include if exists <local/gnome-software_fusermount>
+  }
+
+  include if exists <local/gnome-software>
+}

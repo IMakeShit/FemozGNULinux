@@ -1,0 +1,24 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/plymouth-set-default-theme
+profile plymouth-set-default-theme @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/{m,g,}awk   rix,
+  @{bin}/grep        rix,
+  @{bin}/plymouth    rPx,
+
+  /etc/plymouth/{,*} r,
+
+  include if exists <local/plymouth-set-default-theme>
+}

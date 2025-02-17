@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-backlight
+profile systemd-backlight @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/systemd-common>
+
+  capability net_admin,
+
+  @{exec_path} mr,
+
+  /var/lib/systemd/backlight/*backlight* rw,
+
+  @{run}/udev/data/+pci:* r,
+  @{run}/udev/data/+backlight:* r,
+  @{run}/udev/data/+leds:*backlight* r,
+
+  @{sys}/bus/ r,
+  @{sys}/bus/pci/devices/ r,
+  @{sys}/class/ r,
+  @{sys}/class/backlight/ r,
+
+  @{sys}/devices/@{pci}/*:@{int}.@{int}/**/ r,
+  @{sys}/devices/@{pci}/ r,
+  @{sys}/devices/@{pci}/backlight/**/{max_brightness,actual_brightness} r,
+  @{sys}/devices/@{pci}/backlight/**/{uevent,type} r,
+  @{sys}/devices/@{pci}/backlight/**/brightness rw,
+  @{sys}/devices/@{pci}/class r,
+  @{sys}/devices/@{pci}/drm/card@{int}/**/{max_brightness,actual_brightness} r,
+  @{sys}/devices/@{pci}/drm/card@{int}/**/{uevent,type} r,
+  @{sys}/devices/@{pci}/drm/card@{int}/**/brightness rw,
+  @{sys}/devices/@{pci}/uevent r,
+
+  @{sys}/devices/platform/**/leds/*backlight*/brightness rw,
+  @{sys}/devices/platform/**/leds/*backlight*/max_brightness r,
+  @{sys}/devices/platform/**/leds/*backlight*/uevent r,
+
+  include if exists <local/systemd-backlight>
+}

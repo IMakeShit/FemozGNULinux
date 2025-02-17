@@ -1,0 +1,64 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/vi{pw,gr}
+profile vipw-vigr @{exec_path} {
+  include <abstractions/base>
+
+  capability chown,
+
+  @{exec_path} mr,
+
+  @{sh_path}             rix,
+
+  @{bin}/sensible-editor rCx -> editor,
+  @{bin}/vim.*           rCx -> editor,
+
+  /etc/login.defs r,
+
+  /etc/{passwd,shadow,gshadow,group}{,.edit} rw,
+  /etc/{passwd,shadow,gshadow,group}.@{pid} rw,
+  /etc/passwd.lock  wl -> /etc/passwd.@{pid},
+  /etc/shadow.lock  wl -> /etc/shadow.@{pid},
+  /etc/gshadow.lock wl -> /etc/gshadow.@{pid},
+  /etc/group.lock   wl -> /etc/group.@{pid},
+  /etc/passwd-      wl -> /etc/passwd,
+  /etc/shadow-      wl -> /etc/shadow,
+  /etc/gshadow-     wl -> /etc/gshadow,
+  /etc/group-       wl -> /etc/group,
+
+  # A process first uses lckpwdf() to lock the lock file, thereby gaining exclusive rights to
+  # modify the /etc/passwd or /etc/shadow password database.
+  /etc/.pwd.lock rwk,
+
+
+  profile editor {
+    include <abstractions/base>
+    include <abstractions/fzf>
+    include <abstractions/nameservice-strict>
+
+    capability fsetid,
+
+    @{bin}/sensible-editor mr,
+    @{bin}/vim.*           mrix,
+    @{sh_path}              rix,
+    @{bin}/which{,.debianutils}            rix,
+
+    owner @{HOME}/.selected_editor r,
+
+    /usr/share/vim/{,**} r,
+    /etc/vim/{,**} r,
+    owner @{HOME}/.viminfo{,.tmp} rw,
+
+    /etc/{passwd,shadow,gshadow,group}.edit rw,
+
+  }
+
+  include if exists <local/vipw-vigr>
+}

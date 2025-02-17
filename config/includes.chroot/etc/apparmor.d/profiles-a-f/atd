@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/atd
+profile atd @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/authentication>
+  include <abstractions/nameservice-strict>
+
+  capability audit_write,
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability setgid,
+  capability setuid,
+  capability sys_resource,
+
+  signal (receive) set=hup,
+
+  ptrace (read) peer=unconfined,
+
+  @{exec_path} mr,
+
+  @{sh_path}           rix,
+  @{bin}/sendmail     rPUx,
+
+  @{etc_ro}/environment r,
+  @{etc_ro}/security/limits.d/ r,
+
+  /var/spool/cron/atjobs/{,*} rwl,
+  /var/spool/cron/atspool/{,*} rwl,
+
+  @{run}/atd.pid rwk,
+
+  @{PROC}/@{pid}/loginuid rw,
+  @{PROC}/@{pid}/uid_map r,
+  @{PROC}/1/limits r,
+  @{PROC}/loadavg r,
+
+  include if exists <local/atd>
+}

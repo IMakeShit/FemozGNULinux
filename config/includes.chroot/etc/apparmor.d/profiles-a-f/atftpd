@@ -1,0 +1,28 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/atftpd
+profile atftpd @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice>
+  # For libwrap (TCP Wrapper) support
+  include <abstractions/hosts_access>
+
+  # to run atftpd daemon as nobody/nogroup
+  capability setgid,
+  capability setuid,
+
+  @{exec_path} mr,
+
+  # FTP dirs (add "w" if you need write permissions and hence upload files)
+  /tftpboot/{,**} r,
+  /srv/tftp/{,**} r,
+
+  include if exists <local/atftpd>
+}

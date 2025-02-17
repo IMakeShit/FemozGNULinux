@@ -1,0 +1,27 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+  owner @{user_config_dirs}/trashrc rw,
+  owner @{user_config_dirs}/trashrc.lock rwk,
+  owner @{user_config_dirs}/#@{int} rwk,
+  owner @{user_config_dirs}/trashrc.* rwl,
+
+  owner @{run}/user/@{uid}/#@{int} rw,
+  owner @{run}/user/@{uid}/trash.so*.@{int}.slave-socket rwl,
+
+  # Home trash location
+  owner @{user_share_dirs}/Trash/{,**} rwl,
+
+  # Partitions' trash location when the admin creates the .Trash/ folder in the top lvl dir
+  owner /{media,mnt}/*/.Trash/{,**} rwl,
+
+  # Partitions' trash location when the admin doesn't create the .Trash/ folder in the top lvl dir
+  owner /{media,mnt}/*/.Trash-@{int}/{,**} rwl,
+
+  # Removable media's trash location when the admin creates the .Trash/ folder in the top lvl dir
+  owner /{media,mnt}/*/*/.Trash/{,**} rwl,
+
+  # Removable media's trash location when the admin doesn't create the .Trash/ folder in the top lvl dir
+  owner /{media,mnt}/*/*/.Trash-@{int}/{,**} rwl,

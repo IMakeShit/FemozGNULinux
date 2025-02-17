@@ -1,0 +1,42 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# This profile is designed to be used in a child profile to limit what
+# confined application can invoke via xdg-open helper.
+
+# Instead of allowing the run of all software in @{bin}/, the purpose of
+# this profile is to list all GUI program that can open resources.
+
+# Ultimatelly, only sandbox manager program like bwrap, snap, flatpak, firejail
+# should be present here. Until this day, this profile will be a controlled mess.
+
+# Note: This profile does not specify an attachment path because it is
+# intended to be used only via "Px -> child-open" exec transitions
+# from other profiles. 
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/exo-open @{bin}/xdg-open 
+@{exec_path} += @{lib}/@{multiarch}/glib-[0-9]*/gio-launch-desktop @{lib}/gio-launch-desktop
+profile child-open {
+  include <abstractions/base>
+  include <abstractions/app-open>
+  include <abstractions/dri-enumerate>
+  include <abstractions/mesa>
+  include <abstractions/vulkan>
+  include <abstractions/xdg-open>
+
+  @{exec_path} mrix,
+
+  @{sh_path}               rix,
+  @{bin}/{,m,g}awk         rix,
+  @{bin}/basename          rix,
+  @{bin}/env               rix,
+  @{bin}/readlink          rix,
+
+  include if exists <usr/child-open.d>
+  include if exists <local/child-open>
+}

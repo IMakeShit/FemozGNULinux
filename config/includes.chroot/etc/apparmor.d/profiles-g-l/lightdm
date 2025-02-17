@@ -1,0 +1,86 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/lightdm
+profile lightdm @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/authentication>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/nameservice-strict>
+  include <abstractions/wutmp>
+  include <abstractions/X>
+
+  audit capability sys_nice,
+  capability audit_write,
+  capability chown,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability kill,
+  capability net_admin,
+  capability setgid,
+  capability setuid,
+  capability sys_resource,
+  capability sys_tty_config,
+
+  network netlink raw,
+
+  signal (send) set=(term, kill, usr1),
+  signal (receive) set=(usr1) peer=xorg,
+
+  @{exec_path} mrix,
+
+  @{bin}/rm rix,
+
+  @{bin}/lightdm-gtk-greeter   rPx,
+  @{bin}/startx                rPx,
+  @{bin}/Xorg                  rPx,
+  @{bin}/plymouth              rPx,
+  @{bin}/gnome-keyring-daemon  rPx,
+
+  @{lib}/security-misc/* rPUx, # only: whonix
+  @{lib}/{,at-spi2{,-core}/}at-spi-bus-launcher rPx,
+
+  /etc/X11/Xsession            rPUx,
+
+  /usr/share/lightdm/{,**} r,
+  /usr/share/wayland-sessions/{,*.desktop} r,
+  /usr/share/xgreeters/{,**} r,
+
+  /etc/default/locale r,
+  /etc/environment r,
+  /etc/lightdm/{,**} r,
+  /etc/security/limits.d/{,*} r,
+
+  /var/cache/lightdm/dmrc/*.dmrc* rw,
+  /var/lib/lightdm/{,**} rw,
+  /var/log/lightdm/{,**} rw,
+
+  owner @{HOME}/.dmrc r,
+  owner @{HOME}/.Xauthority rw,
+  owner @{HOME}/.xsession-errors{,.old} rw,
+
+        @{run}/faillock/ rw,
+        @{run}/faillock/user rwk,
+        @{run}/lightdm.pid rw,
+        @{run}/lightdm/{,**} rw,
+  owner @{run}/systemd/sessions/@{int}.ref rw,
+
+        @{PROC}/1/limits r,
+        @{PROC}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/loginuid rw,
+  owner @{PROC}/@{pid}/uid_map r,
+
+  /dev/tty@{int} r,
+
+  include if exists <local/lightdm>
+}

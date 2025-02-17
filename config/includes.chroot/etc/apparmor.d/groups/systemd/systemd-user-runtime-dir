@@ -1,0 +1,35 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-user-runtime-dir
+profile systemd-user-runtime-dir @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/nameservice-strict>
+  include <abstractions/systemd-common>
+
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability net_admin,
+  capability sys_admin,
+
+  mount fstype=tmpfs options=(rw,nosuid,nodev) -> @{run}/user/@{uid}/,
+  umount @{run}/user/@{uid}/,
+
+  unix (bind) type=stream addr=@@{hex}/bus/systemd-user-ru/system,
+
+  @{exec_path} mr,
+
+  /etc/machine-id r,
+
+  @{run}/user/@{uid}/{,**} rw,
+
+  include if exists <local/systemd-user-runtime-dir>
+}

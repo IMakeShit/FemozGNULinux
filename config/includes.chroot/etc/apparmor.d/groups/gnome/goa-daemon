@@ -1,0 +1,54 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/goa-daemon
+profile goa-daemon @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/p11-kit>
+  include <abstractions/ssl_certs>
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  # dbus: own bus=session name=org.gnome.OnlineAccounts
+
+  dbus send bus=session path=/org/gnome/Identity
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=:*, label=goa-identity-service),
+  dbus send bus=session path=/org/gnome/Identity/Manager
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=goa-identity-service),
+
+  @{exec_path} mr,
+
+  /var/lib/gdm{3,}/.config/dconf/user r,
+
+  owner /var/lib/gdm{3,}/.config/ w,
+  owner /var/lib/gdm{3,}/.config/goa-1.0/ w,
+
+  owner @{user_config_dirs}/goa-1.0/ rw,
+  owner @{user_config_dirs}/goa-1.0/accounts.conf* rw,
+
+  @{PROC}/sys/net/ipv6/conf/all/disable_ipv6 r,
+
+  include if exists <local/goa-daemon>
+}

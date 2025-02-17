@@ -1,0 +1,88 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/xdg-desktop-portal-gnome
+profile xdg-desktop-portal-gnome @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.Accounts>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/bus/org.gnome.Mutter.DisplayConfig>
+  include <abstractions/bus/org.gnome.Shell.Introspect>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/deny-sensitive-home>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+  include <abstractions/user-download>
+
+  network unix stream,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=term peer=gdm,
+
+  dbus bind bus=session name=org.freedesktop.impl.portal.desktop.gnome,
+
+  dbus send bus=session path=/org/gnome/Shell/Screenshot
+       interface=org.freedesktop.DBus.Properties
+       member=GetAll
+       peer=(name=:*, label=gnome-shell),
+
+  dbus send bus=session path=/org/freedesktop/portal/desktop
+       interface=org.freedesktop.impl.portal.Background
+       member=RunningApplicationsChanged
+       peer=(name=org.freedesktop.DBus, label=xdg-desktop-portal),
+
+  dbus receive bus=session path=/org/freedesktop/portal/desktop
+       interface=org.freedesktop.impl.portal.Background
+       member=GetAppState
+       peer=(name=:*, label=xdg-desktop-portal),
+
+  dbus send bus=session path=/org/freedesktop/portal/desktop
+       interface=org.freedesktop.impl.portal.Settings
+       member=SettingChanged
+       peer=(name=org.freedesktop.DBus, label=xdg-desktop-portal),
+
+  dbus (send, receive) bus=session path=/org/gnome/Mutter/*
+       interface=org.gnome.Mutter.*
+       peer=(name=:*, label="{gnome-shell,gsd-xsettings}"),
+  dbus send bus=session path=/org/gnome/Mutter/*
+       interface=org.freedesktop.DBus.Properties
+       peer=(name=:*, label="{gnome-shell,gsd-xsettings}"),
+
+  @{exec_path} mr,
+
+  / r,
+  @{bin}/ r,
+  @{bin}/* r,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/thumbnailers/{,**} r,
+
+  /var/lib/gdm{3,}/.cache/fontconfig/[a-f0-9]*.cache-?{,.NEW,.LCK,.TMP-*} rw,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+  /var/lib/snapd/desktop/icons/{,**} r,
+
+  owner @{HOME}/*/{,**} rw,
+
+  owner /tmp/.goutputstream-@{rand6} rw,
+  owner /tmp/@{rand6} rw,
+
+  @{run}/mount/utab r,
+
+  owner @{PROC}/@{pid}/ r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/task/@{tid}/ r,
+  owner @{PROC}/@{pid}/task/@{tid}/status r,
+
+  include if exists <local/xdg-desktop-portal-gnome>
+}

@@ -1,0 +1,57 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/wpa_supplicant
+profile wpa-supplicant @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fsetid,
+  capability mknod,
+  capability net_admin,
+  capability net_raw,
+  capability sys_module,
+
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+  network packet dgram,
+  network packet raw,
+
+  # dbus: own bus=system name=fi.w1.wpa_supplicant1
+
+  @{exec_path} mr,
+
+  /etc/wpa_supplicant/wpa_supplicant.conf rw,
+  /etc/wpa_supplicant/wpa_supplicant.conf.tmp rw,
+  /etc/libnl/{classid,pktloc} r,
+
+  /var/log/wpa_supplicant.log rw,
+
+  @{HOME}/.cat_installer/*.pem r,
+  @{user_config_dirs}/cat_installer/*.pem r,
+
+  owner @{run}/wpa_supplicant/{,**} rw,
+
+  @{sys}/devices/@{pci}/ieee*/phy@{int}/name r,
+
+  @{PROC}/sys/net/ipv{4,6}/conf/p2p*/drop_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlan*/drop_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlo*/drop_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlp*/drop_* rw,
+
+  /dev/rfkill rw,
+
+  include if exists <local/wpa-supplicant>
+}

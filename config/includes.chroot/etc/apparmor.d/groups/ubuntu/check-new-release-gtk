@@ -1,0 +1,59 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/ubuntu-release-upgrader/check-new-release-gtk
+profile check-new-release-gtk @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{bin}/dpkg         rPx,
+  @{bin}/ischroot     rix,
+  @{bin}/lsb_release  rPx -> lsb_release,
+
+  @{lib}/python3/dist-packages/UpdateManager/**/__pycache__/*.cpython-@{int}.pyc.@{int} w,
+  @{lib}/python3/dist-packages/gi/**/__pycache__/*.cpython-@{int}.pyc.@{int} w,
+
+  /usr/share/distro-info/{,**} r,
+  /usr/share/ubuntu-release-upgrader/{,**} r,
+  /usr/share/update-manager/{,**} r,
+  /usr/share/dconf/profile/gdm r,
+
+  /etc/update-manager/{,**} r,
+
+  /var/lib/update-manager/{,**} rw,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+  /var/lib/gdm{3,}/.cache/update-manager-core/meta-release-lts rw,
+  /var/lib/gdm{3,}/.cache/update-manager-core/ rwk,
+
+  /var/cache/apt/ rw,
+
+  owner @{user_cache_dirs}/update-manager-core/{,**} rw,
+
+        @{PROC}/@{pids}/mountinfo r,
+        @{PROC}/@{pids}/mounts r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/check-new-release-gtk>
+}

@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pcscd
+profile pcscd @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/devices-usb>
+
+  capability sys_ptrace,
+
+  network netlink raw,
+
+  ptrace (read) peer=pkcs11-register,
+  ptrace (read) peer=rngd,
+  ptrace (read) peer=scdaemon,
+
+  @{exec_path} mr,
+
+  /etc/libccid_Info.plist r,
+  /etc/reader.conf.d/ r,
+  /etc/reader.conf.d/libccidtwin r,
+  /etc/reader.conf.d/reader.conf r,
+
+  owner @{run}/pcscd/{,pcscd.pid} rw,
+
+  @{PROC}/@{pids}/stat r,
+
+  include if exists <local/pcscd>
+}

@@ -1,0 +1,36 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/mutter-x11-frames
+profile mutter-x11-frames @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  @{exec_path} mr,
+
+  /usr/share/dconf/profile/gdm r,
+  /usr/share/gdm/greeter-dconf-defaults r,
+
+  /var/lib/gdm{3,}/.config/dconf/user r,
+  /var/lib/gdm{3,}/.cache/fontconfig/[a-f0-9]*.cache-?{,.NEW,.LCK,.TMP-*} r,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+
+  @{sys}/devices/@{pci}/boot_vga r,
+
+  owner @{PROC}/@{pid}/cmdline r,
+
+  include if exists <local/mutter-x11-frames>
+}

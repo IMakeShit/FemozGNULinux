@@ -1,0 +1,65 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dlocate
+profile dlocate @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} rix,
+  @{sh_path}        rix,
+
+  @{bin}/getopt     rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/{m,g,}awk  rix,
+  @{bin}/cat        rix,
+  @{bin}/sort       rix,
+  @{bin}/sed        rix,
+  @{bin}/stty       rix,
+  @{bin}/grep-dctrl rix,
+  @{bin}/cut        rix,
+  @{bin}/xargs      rix,
+  @{bin}/ls         rix,
+  @{bin}/du         rix,
+  @{bin}/stat       rix,
+
+  @{bin}/md5sum     rCx -> md5sum,
+
+  /etc/default/dlocate r,
+
+  /var/lib/dlocate/dlocatedb r,
+  /var/lib/dlocate/dpkg-list r,
+
+  /var/lib/dpkg/status r,
+  /var/lib/dpkg/info/*.list r,
+  /var/lib/dpkg/info/*.conffiles r,
+  /var/lib/dpkg/info/*.md5sums r,
+
+  owner /tmp/sh-thd.* rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/fd/2 w,
+
+  / r,
+
+
+  profile md5sum {
+    include <abstractions/base>
+
+    @{bin}/md5sum mr,
+
+    # For the md5 check
+    /boot/** r,
+    /usr/** r,
+
+  }
+
+  include if exists <local/dlocate>
+}

@@ -1,0 +1,27 @@
+#!/sbin/openrc-run
+
+command=/usr/sbin/kloak
+command_background=true
+
+pidfile=/run/kloak.pid
+
+depend() {
+    after localmount
+}
+
+start_pre() {
+    checkpath --directory --mode 0755 /run/kloak
+}
+
+start() {
+    ebegin "Starting kloak"
+    start_pre
+    start-stop-daemon --start --background --make-pidfile --pidfile ${pidfile} --exec ${command}
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping kloak"
+    start-stop-daemon --stop --pidfile ${pidfile}
+    eend $?
+}

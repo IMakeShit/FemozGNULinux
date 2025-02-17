@@ -1,0 +1,58 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ibus-daemon
+profile ibus-daemon @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(usr1) peer=gnome-shell,
+  signal (send) set=(term) peer=ibus*,
+
+  unix (bind, listen)          type=stream addr="@/var/lib/gdm{3,}/.cache/ibus/dbus-????????",
+  unix (send, receive, accept) type=stream addr="@/var/lib/gdm{3,}/.cache/ibus/dbus-????????" peer=(label=ibus-*),
+  unix (send, receive, accept) type=stream addr="@/var/lib/gdm{3,}/.cache/ibus/dbus-????????" peer=(label=gnome-shell),
+
+  dbus bind bus=session name=org.freedesktop.portal.IBus,
+
+  dbus bind bus=session name=org.freedesktop.IBus,
+  dbus send bus=session path=/org/freedesktop/IBus
+       interface=org.freedesktop.DBus.Peer
+       peer=(name=org.freedesktop.portal.IBus), # all members, all peer's labels
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mrix,
+
+  @{sh_path}             rix,
+  @{lib}/{,ibus/}ibus-*  rPUx,
+
+  /usr/share/ibus/{,**} r,
+  /usr/share/ibus-table/tables/ r,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  owner @{user_cache_dirs}/ibus/{,**} rw,
+
+  /var/lib/gdm{3,}/.config/ibus/{,**} rw,
+  /var/lib/gdm{3,}/.cache/ibus/{,**} rw,
+  /var/lib/gdm{3,}/.config/ibus/bus/ r,
+
+  owner @{PROC}/@{pids}/fd/ r,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/ibus-daemon>
+}

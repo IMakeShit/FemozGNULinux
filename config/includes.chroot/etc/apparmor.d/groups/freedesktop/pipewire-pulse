@@ -1,0 +1,47 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2015-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pipewire-pulse
+profile pipewire-pulse @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/nameservice-strict>
+
+  capability sys_ptrace,
+
+  ptrace (read),
+
+  @{exec_path} mr,
+
+  @{bin}/pactl rix,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /etc/pipewire/client.conf r,
+  /etc/pipewire/pipewire-pulse.conf r,
+  /etc/pipewire/pipewire-pulse.conf.d/{,*} r,
+  /usr/share/pipewire/client.conf r,
+  /usr/share/pipewire/pipewire-pulse.conf r,
+
+  /var/lib/gdm{3,}/.config/pulse/cookie rwk,
+
+  owner @{run}/user/@{uid}/pulse/pid w,
+  owner /tmp/librnnoise-@{int}.so rm,
+
+  @{sys}/devices/virtual/dmi/id/product_name r,
+  @{sys}/devices/virtual/dmi/id/sys_vendor r,
+  @{sys}/devices/virtual/dmi/id/board_vendor r,
+  @{sys}/devices/virtual/dmi/id/bios_vendor r,
+
+  / r,
+  /.flatpak-info r,
+
+  include if exists <local/pipewire-pulse>
+}

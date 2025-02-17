@@ -1,0 +1,66 @@
+# apparmor.d - Full set of apparmor profiles
+# Extended system directories definition
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# To allow extended personalisation without breaking everything.
+# All apparmor profiles should always use the variables defined here.
+
+# Single hexadecimal character
+@{h}=[0-9a-fA-F]
+
+# Single alphanumeric character
+@{c}=[0-9a-zA-Z]
+
+# Up to 10 digits (0-9999999999)
+@{int}=[0-9]{[0-9],}{[0-9],}{[0-9],}{[0-9],}{[0-9],}{[0-9],}{[0-9],}{[0-9],}{[0-9],}
+
+# Any six characters
+@{rand6}=@{c}@{c}@{c}@{c}@{c}@{c}
+
+# Any eight characters
+@{rand8}=@{c}@{c}@{c}@{c}@{c}@{c}@{c}@{c}
+
+# Any ten characters
+@{rand10}=@{c}@{c}@{c}@{c}@{c}@{c}@{c}@{c}@{c}@{c}
+
+# MD5 hash
+@{md5}=@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}
+
+# Universally unique identifier
+@{uuid}=@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}[-_]@{h}@{h}@{h}@{h}[-_]@{h}@{h}@{h}@{h}[-_]@{h}@{h}@{h}@{h}[-_]@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}@{h}
+
+# Hexadecimal
+@{hex}=@{h}*@{h}
+
+# Shortcut for PCI device
+@{pci_id}=@{h}@{h}@{h}@{h}:@{h}@{h}:@{h}@{h}.@{h}
+@{pci_bus}=pci@{h}@{h}@{h}@{h}:@{h}@{h}
+@{pci}=@{pci_bus}/**/
+
+# hci devices
+@{hci_id}=dev_@{c}@{c}_@{c}@{c}_@{c}@{c}_@{c}@{c}_@{c}@{c}_@{c}@{c}
+
+# Date and time
+@{date}=[0-2][0-9][0-9][0-9]-[01][0-9]-[0-3][0-9]
+@{time}={[0-2],}[0-9]-[0-5][0-9]-[0-6][0-9]
+
+# @{MOUNTDIRS} is a space-separated list of where user mount directories
+# are stored, for programs that must enumerate all mount directories on a
+# system.
+@{MOUNTDIRS}=/media/ @{run}/media/*/ /mnt/
+
+# @{MOUNTS} is a space-separated list of all user mounted directories.
+@{MOUNTS}=@{MOUNTDIRS}/*/
+
+# Common places for binaries and libraries across distributions
+@{bin}=/{,usr/}{,s}bin
+@{lib}=/{,usr/}lib{,exec,32,64}
+
+# Name of the systemd profile: unconfined || systemd
+@{systemd}=unconfined
+@{systemd_user}=unconfined
+
+# Udev data dynamic assignment ranges
+@{dynamic}=23[4-9] 24[0-9] 25[0-4]                       # range 234 to 254
+@{dynamic}+=38[4-9] 39[0-9] 4[0-9][0-9] 50[0-9] 51[0-1]  # range 384 to 511

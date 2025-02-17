@@ -1,0 +1,55 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/add{user,group}
+profile adduser @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/perl>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability setuid,
+  capability setgid,
+  capability fowner,
+  capability fsetid,
+
+  @{exec_path} r,
+  @{bin}/perl r,
+
+  @{sh_path}        rix,
+  @{bin}/find       rix,
+  @{bin}/logger     rix,
+  @{bin}/rm         rix,
+
+  @{bin}/chage         rPx,
+  @{bin}/chfn          rPx,
+  @{bin}/gpasswd       rPx,
+  @{bin}/groupadd      rPx,
+  @{bin}/groupdel      rPx,
+  @{bin}/passwd        rPx,
+  @{bin}/useradd       rPx,
+  @{bin}/userdel       rPx,
+  @{bin}/usermod       rPx,
+
+  /etc/{group,passwd,shadow} r,
+  /etc/adduser.conf r,
+  /etc/skel/{,.*} r,
+
+  # To create user dirs and copy files from /etc/skel/ to them
+  @{HOME}/ rw,
+  @{HOME}/.* w,
+  /var/lib/*/{,*} rw,
+
+  @{run}/adduser wk,
+
+  include if exists <local/adduser>
+}

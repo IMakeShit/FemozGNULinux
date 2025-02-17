@@ -1,0 +1,71 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/systemd-analyze
+profile systemd-analyze @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/consoles>
+  include <abstractions/systemd-common>
+
+  capability sys_resource,
+  capability net_admin,
+
+  network inet dgram,
+  network netlink raw,
+
+  signal (send) peer=child-pager,
+
+  # dbus: talk bus=system name=org.freedesktop.systemd1 label="@{systemd}"
+
+  @{exec_path} mr,
+
+  @{lib}/systemd/system-environment-generators/* rix,
+
+  @{bin}/pager     rPx -> child-pager,
+  @{bin}/less      rPx -> child-pager,
+  @{bin}/more      rPx -> child-pager,
+  @{bin}/man       rPx,
+
+  /usr/ r,
+  @{lib}/systemd/** r,
+
+  /etc/default/locale r,
+  /etc/locale.conf r,
+  /etc/systemd/** r,
+
+  owner /tmp/systemd-temporary-*/ rw,
+
+  @{run}/systemd/generator/ r,
+  @{run}/systemd/private rw,
+  @{run}/systemd/system/ r,
+  @{run}/systemd/transient/ r,
+  @{run}/systemd/userdb/io.systemd.DynamicUser w,
+  @{run}/udev/data/* r,
+  @{run}/udev/tags/systemd/ r,
+
+  @{sys}/devices/**/uevent r,
+  @{sys}/firmware/acpi/tables/FPDT r,
+  @{sys}/fs/cgroup/{,**} r,
+  @{sys}/fs/cgroup/{systemd,unified}/**/cgroup.procs rw,
+  @{sys}/fs/cgroup/unified/**/init.scope/ rw,
+  @{sys}/module/**/uevent r,
+
+  @{sys}/firmware/efi/efivars/LoaderTimeInitUSec-@{uuid} r,
+  @{sys}/firmware/efi/efivars/LoaderTimeExecUSec-@{uuid} r,
+
+        @{PROC}/swaps r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/comm r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  /dev/tty rw,
+
+  include if exists <local/systemd-analyze>
+}

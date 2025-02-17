@@ -1,0 +1,39 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/picom{,-trans}
+profile picom @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dri-common>
+  include <abstractions/nameservice-strict>
+  include <abstractions/mesa>
+
+  @{exec_path} mr,
+
+  @{bin}/sed      rix,
+  @{bin}/xargs    rix,
+  @{bin}/{,e}grep rix,
+  @{bin}/echo     rix,
+
+  # For migrating from compton.
+  owner @{user_config_dirs}/compton.conf r,
+
+  owner @{user_config_dirs}/picom.conf r,
+
+  owner @{HOME}/.Xauthority r,
+
+  @{sys}/devices/@{pci}/{uevent,vendor,device,subsystem_vendor,subsystem_device} r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/picom>
+}

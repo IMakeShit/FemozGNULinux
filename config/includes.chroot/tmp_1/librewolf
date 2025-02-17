@@ -1,0 +1,7 @@
+#!/bin/sh
+
+# Заставляем браузер использовать libhardened_malloc
+# Оно работает!
+# :3
+# Изолируем браузер,bwrap запускаем с библеотекой hardened_malloc и браузер внутри песочницы тоже
+LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --bind / / --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --dev /dev --unshare-pid /usr/bin/librewolf "$@"

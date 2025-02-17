@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/baloorunner
+profile baloorunner @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/graphics>
+  include <abstractions/kde-strict>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} mr,
+
+  @{bin}/* rPx,
+
+  /etc/xdg/baloofilerc r,
+
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+
+  owner @{user_config_dirs}/baloofilerc r,
+
+  owner @{user_share_dirs}/baloo/{,**} rwk,
+
+  /tmp/ r,
+
+  @{PROC}/sys/kernel/core_pattern r,
+
+  include if exists <local/baloorunner>
+}

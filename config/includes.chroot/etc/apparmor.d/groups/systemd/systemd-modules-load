@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-modules-load
+profile systemd-modules-load @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/systemd-common>
+
+  capability net_admin,
+  capability sys_module,
+
+  @{exec_path} mr,
+
+  @{sys}/module/*/initstate r,
+
+  /etc/modprobe.d/ r,
+  /etc/modprobe.d/*.conf r,
+  /etc/modules r,
+  /etc/modules-load.d/ r,
+  /etc/modules-load.d/*.conf r,
+
+  @{sys}/module/compression r,
+
+  include if exists <local/systemd-modules-load>
+}

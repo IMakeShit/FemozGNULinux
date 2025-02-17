@@ -1,0 +1,52 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dput /usr/share/dput/execute-dput
+profile execute-dput @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/python>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} r,
+
+  @{bin}/python3.@{int} r,
+
+  @{sh_path}        rix,
+  @{bin}/dpkg       rPx -> child-dpkg,
+  @{bin}/gpg{,2}    rCx -> gpg,
+  @{bin}/gpgconf    rCx -> gpg,
+  @{bin}/gpgsm      rCx -> gpg,
+
+  /usr/share/dput/{,**} r,
+
+  /etc/dput.cf r,
+
+  owner @{HOME}/.dput.cf r,
+
+  owner @{user_build_dirs}/**.changes r,
+  owner @{user_build_dirs}/**.dsc r,
+  owner @{user_build_dirs}/**.buildinfo r,
+  owner @{user_build_dirs}/**.tar.xz r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  profile gpg {
+    include <abstractions/base>
+
+    @{bin}/gpgconf mr,
+    @{bin}/gpg{,2} mr,
+    @{bin}/gpgsm mr,
+
+    owner @{HOME}/@{XDG_GPG_DIR}/ rw,
+    owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+  }
+
+  include if exists <local/execute-dput>
+}

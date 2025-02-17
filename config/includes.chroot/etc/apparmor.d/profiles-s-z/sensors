@@ -1,0 +1,47 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2015-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/sensors
+profile sensors @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  # Sensors config files
+  /etc/sensors.d/{,*} r,
+  /etc/sensors3.conf r,
+
+  @{sys}/class/hwmon/ r,
+  @{sys}/class/i2c-adapter/ r,
+  @{sys}/devices/**/hwmon*/{,**/} r,
+  @{sys}/devices/**/hwmon*/{in[0-9]_label,in[0-9]_min,in[0-9]_max} r,
+  @{sys}/devices/**/hwmon*/{name,temp*,*_input} r,
+  @{sys}/devices/**/hwmon*/**/{name,temp*,*_input} r,
+  @{sys}/devices/**/hwmon/hwmon@{int}/power@{int}_crit r,
+  @{sys}/devices/**/hwmon/hwmon@{int}/fan@{int}_{label,max,min} r,
+  @{sys}/devices/{,platform/*.{i2c,hdmi}/}i2c-@{int}/name r,
+  @{sys}/devices/@{pci}/name r,
+  @{sys}/devices/platform/**/power_supply/**/hwmon@{int}/curr1_max r,
+  @{sys}/devices/virtual/hwmon/hwmon@{int}/ r,
+  @{sys}/devices/virtual/hwmon/hwmon@{int}/{name,temp*} r,
+
+  # file_inherit
+  deny @{PROC}/@{pid}/net/dev r,
+  deny @{PROC}/@{pid}/stat r,
+  deny @{PROC}/@{pid}/net/tcp{,6} r,
+  deny @{PROC}/@{pid}/net/if_inet6 r,
+  deny @{PROC}/@{pid}/cmdline r,
+  deny @{PROC}/uptime r,
+  deny @{PROC}/diskstats r,
+  deny @{PROC}/loadavg r,
+  deny @{PROC}/@{pid}/io r,
+
+  include if exists <local/sensors>
+}

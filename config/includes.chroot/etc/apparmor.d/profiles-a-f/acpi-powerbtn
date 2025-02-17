@@ -1,0 +1,50 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+profile acpi-powerbtn flags=(attach_disconnected) {
+  include <abstractions/base>
+
+  /etc/acpi/powerbtn-acpi-support.sh r,
+
+  @{bin}/{ba,da,}sh   rix,
+  @{bin}/{e,}grep     rix,
+  @{bin}/dbus-send    rix,
+  @{bin}/killall5     rix,
+  @{bin}/pgrep        rix,
+  @{bin}/pinky        rix,
+  @{bin}/sed          rix,
+  @{bin}/shutdown     rix,
+  /etc/acpi/powerbtn.sh    rix,
+
+  @{bin}/systemctl    rPx -> child-systemctl,
+  @{bin}/ps           rPx,
+
+  @{bin}/fgconsole    rCx,
+
+  /usr/share/acpi-support/** r,
+
+  @{PROC} r,
+  @{PROC}/uptime r,
+  @{PROC}/@{pids}/cmdline r,
+  @{PROC}/@{pids}/stat r,
+
+  deny / r,
+
+  profile fgconsole {
+    include <abstractions/base>
+
+    capability sys_tty_config,
+
+    @{bin}/fgconsole r,
+
+          /dev/tty       rw,
+    owner /dev/tty@{int} rw,
+  }
+
+  include if exists <local/acpi-powerbtn>
+}

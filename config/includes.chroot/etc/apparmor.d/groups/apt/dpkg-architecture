@@ -1,0 +1,51 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dpkg-architecture
+profile dpkg-architecture @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/perl>
+
+  capability dac_read_search,
+
+  @{exec_path} r,
+  /usr/bin/perl r,
+
+  @{bin}/{,@{multiarch}-}gcc-[0-9]* rix,
+  @{lib}/llvm-[0-9]*/bin/clang      rix,
+
+  @{bin}/ccache                     rCx -> ccache,
+  @{bin}/dpkg                       rPx -> child-dpkg,
+
+  /usr/share/dpkg/** r,
+
+  /etc/debian_version r,
+
+  # file_inherit
+  owner /tmp/* rw,
+
+
+  profile ccache {
+    include <abstractions/base>
+
+    @{bin}/ccache mr,
+
+    @{lib}/llvm-[0-9]*/bin/clang      rix,
+    @{bin}/{,@{multiarch}-}gcc-[0-9]* rix,
+    @{bin}/{,@{multiarch}-}g++-[0-9]* rix,
+
+    /media/ccache/*/** rw,
+
+    /etc/debian_version r,
+
+  }
+
+  include if exists <local/dpkg-architecture>
+}

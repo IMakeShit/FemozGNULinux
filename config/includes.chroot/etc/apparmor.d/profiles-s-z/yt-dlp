@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/yt-dlp
+profile yt-dlp @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-download-strict>
+  include <abstractions/xdg-desktop>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/ r,
+  @{bin}/file    rix,
+  @{bin}/uname   rix,
+
+  @{bin}/ffmpeg  rPx,
+  @{bin}/ffprobe rPx,
+
+  /etc/magic r,
+
+  owner @{user_music_dirs}/{,**} rwk,
+  owner @{user_videos_dirs}/{,**} rwk,
+
+  owner @{user_cache_dirs}/yt-dlp/{,**} rw,
+
+  owner @{user_config_dirs}/yt-dlp/{,**} rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/yt-dlp>
+}

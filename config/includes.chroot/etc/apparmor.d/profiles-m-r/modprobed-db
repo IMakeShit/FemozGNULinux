@@ -1,0 +1,45 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/modprobed-db
+profile modprobed-db @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} mr,
+
+  @{sh_path}           rix,
+  @{bin}/cat           rix,
+  @{bin}/cp            rix,
+  @{bin}/cut           rix,
+  @{bin}/gawk          rix,
+  @{bin}/getent        rix,
+  @{bin}/grep          rix,
+  @{bin}/logname       rix,
+  @{bin}/md5sum        rix,
+  @{bin}/rm            rix,
+  @{bin}/sed           rix,
+  @{bin}/sort          rix,
+  @{bin}/uniq          rix,
+  @{bin}/wc            rix,
+
+  /usr/share/terminfo/** r,
+
+  owner @{user_config_dirs}/modprobed-db.conf r,
+  owner @{user_config_dirs}/modprobed.db rw,
+
+  owner /tmp/.inmem rw,
+  owner /tmp/.potential_new_db rw,
+
+        @{PROC}/modules r,
+  owner @{PROC}/@{pid}/loginuid r,
+
+  /dev/tty rw,
+
+  include if exists <local/modprobed-db>
+}

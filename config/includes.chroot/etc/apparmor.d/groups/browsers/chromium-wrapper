@@ -1,0 +1,52 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/chromium
+profile chromium-wrapper @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/freedesktop.org>
+
+  @{exec_path} r,
+
+  @{lib}/chromium/chromium rPx,
+
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/cat        rix,
+  @{bin}/cut        rix,
+  @{bin}/expr       rix,
+  @{bin}/ls         rix,
+  @{bin}/mktemp     rix,
+  @{bin}/rm         rix,
+  @{bin}/sed        rix,
+  @{bin}/tr         rix,
+  @{bin}/uname      rix,
+
+  @{bin}/man       rPUx, #  For "chromium --help"
+  # @{bin}/gdb   rPUx,
+
+  /usr/share/chromium/extensions/ r,
+
+  /etc/chromium.d/{,*} r,
+  /etc/debian_version r,
+
+  owner @{HOME}/.xsession-errors w,
+
+  owner /tmp/chromiumargs.@{rand6} rw,
+  owner /tmp/tmp.*/ rw,
+  owner /tmp/tmp.*/** rwk,
+
+  owner /dev/tty@{int} rw,
+        /dev/dri/card[0-9] rw,
+
+  # Silencer
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/chromium-wrapper>
+}

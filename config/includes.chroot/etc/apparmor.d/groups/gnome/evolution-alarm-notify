@@ -1,0 +1,44 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/evolution-data-server/{,evolution-data-server/}evolution-alarm-notify
+profile evolution-alarm-notify @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+  include <abstractions/graphics>
+  include <abstractions/openssl>
+
+  network netlink raw,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  # dbus: own bus=session name=org.gnome.Evolution-alarm-notify
+
+  dbus (send, receive) bus=session path=/org/gnome/evolution/dataserver/**
+       interface=org.gnome.evolution.dataserver.Calendar*
+       peer=(name=:*, label=evolution-*),
+
+  dbus (send, receive) bus=session path=/org/gnome/evolution/dataserver/**
+       interface=org.freedesktop.DBus.{ObjectManager,Properties}
+       peer=(name=:*, label=evolution-*),
+
+  @{exec_path} mr,
+
+  /usr/share/evolution-data-server/{,**} r,
+  /usr/share/{,zoneinfo-}icu/{,**} r,
+
+  /etc/timezone r,
+
+  include if exists <local/evolution-alarm-notify>
+}

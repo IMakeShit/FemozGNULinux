@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/keepassxc-proxy
+profile keepassxc-proxy @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  signal (receive) set=(term, kill),
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  /usr/share/icons/*/index.theme r,
+
+  owner @{run}/user/@{pid}/app/ w,
+  owner @{run}/user/@{pid}/org.keepassxc.KeePassXC.BrowserServer rw,
+  owner @{run}/user/@{pid}/org.keepassxc.KeePassXC/ rw,
+  owner @{run}/user/@{uid}/app/org.keepassxc.KeePassXC/ rw,
+
+  # file_inherit
+  deny owner @{run}/user/@{uid}/.[a-zA-Z]*/{,s} rw,
+  deny owner @{run}/user/@{uid}/kpxc_server rw,
+  deny       /dev/shm/org.chromium.* rw,
+  deny owner /dev/shm/org.mozilla.ipc.@{int}.@{int} rw,
+  deny owner @{HOME}/.mozilla/** rw,
+  deny owner @{user_cache_dirs}/mozilla/** rw,
+  deny owner @{MOUNTS}/.mozilla/** rw,
+  deny owner /tmp/firefox*/.parentlock rw,
+  deny owner /tmp/tmp-*.xpi rw,
+  deny owner /tmp/tmpaddon r,
+  deny owner @{user_config_dirs}/google-chrome/** rw,
+  deny owner @{user_config_dirs}/chromium/** rw,
+  owner @{HOME}/.xsession-errors w,
+  /dev/dri/renderD128 rw,
+
+  include if exists <local/keepassxc-proxy>
+}

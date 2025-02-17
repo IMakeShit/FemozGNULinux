@@ -1,0 +1,77 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/coredumpctl
+profile coredumpctl @{exec_path} flags=(complain) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability dac_read_search,
+  capability net_admin,
+  capability sys_resource,
+
+  signal (send) peer=child-pager,
+
+  @{exec_path} mr,
+
+  @{bin}/gdb   rCx -> gdb,
+
+  @{bin}/less  rPx -> child-pager,
+  @{bin}/more  rPx -> child-pager,
+  @{bin}/pager rPx -> child-pager,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /var/lib/systemd/coredump/core.*.@{int}.@{hex}.@{int}.@{int}.zst r,
+
+  /{run,var}/log/journal/ r,
+  /{run,var}/log/journal/@{md5}/ r,
+  /{run,var}/log/journal/@{md5}/user-@{hex}.journal* r,
+  /{run,var}/log/journal/@{md5}/system.journal* r,
+  /{run,var}/log/journal/@{md5}/system@@{hex}.journal* r,
+
+  owner /tmp/*.coredump w,
+  owner /tmp/core.* w,
+  owner /var/tmp/coredump-* rw,
+
+        @{PROC}/1/cgroup r,
+        @{PROC}/sys/fs/nr_open r,
+  owner @{PROC}/@{pid}/cgroup r,
+
+  profile gdb {
+    include <abstractions/base>
+    include <abstractions/openssl>
+    include <abstractions/python>
+
+    ptrace (trace),
+
+    @{bin}/gdb    mr,
+    @{bin}/iconv  rix,
+
+    @{bin}/* r,
+
+    /usr/share/gcc-[0-9]*/python/{,**} r,
+    /usr/share/gcc/** r,
+    /usr/share/gdb/{,**} r,
+    /usr/share/glib-2.0/gdb/{,**} r,
+    /usr/share/terminfo/** r,
+
+    /etc/inputrc r,
+    /etc/gdb/** r,
+    
+    owner /var/tmp/coredump-* rw,
+
+    @{PROC}/@{pids}/fd/  r,
+
+  include if exists <local/coredumpctl_gdb>
+  }
+
+  include if exists <local/coredumpctl>
+}

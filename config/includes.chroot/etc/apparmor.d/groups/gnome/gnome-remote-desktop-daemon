@@ -1,0 +1,27 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/gnome-remote-desktop-daemon
+profile gnome-remote-desktop-daemon @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/dconf-write>
+  include <abstractions/graphics>
+  include <abstractions/openssl>
+
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} mr,
+
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+
+  owner @{run}/user/@{uid}/wayland-@{int} rw,
+
+  include if exists <local/gnome-remote-desktop-daemon>
+}

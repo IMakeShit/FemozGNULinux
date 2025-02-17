@@ -1,0 +1,61 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/debsign
+profile debsign @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} r,
+
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/basename   rix,
+  @{bin}/cat        rix,
+  @{bin}/cmp        rix,
+  @{bin}/cp         rix,
+  @{bin}/cu         rix,
+  @{bin}/cut        rix,
+  @{bin}/dirname    rix,
+  @{bin}/getopt     rix,
+  @{bin}/head       rix,
+  @{bin}/md5sum     rix,
+  @{bin}/mktemp     rix,
+  @{bin}/mv         rix,
+  @{bin}/perl       rix,
+  @{bin}/rm         rix,
+  @{bin}/sed        rix,
+  @{bin}/sha{1,256,512}sum rix,
+  @{bin}/stty       rix,
+
+  @{bin}/gpg{,2} rCx -> gpg,
+  
+  /etc/devscripts.conf r,
+
+  owner @{HOME}/.devscripts r,
+
+  owner @{user_build_dirs}/** rwkl -> @{user_build_dirs}/**,
+
+  owner /tmp/debsign.*/ rw,
+  owner /tmp/debsign.*/*.{dsc,changes,buildinfo}{,.asc} rw,
+
+  profile gpg {
+    include <abstractions/base>
+
+    @{bin}/gpg{,2} mr,
+
+    owner @{HOME}/@{XDG_GPG_DIR}/ r,
+    owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+    owner /tmp/debsign.*/*.{dsc,changes,buildinfo} r,
+    owner /tmp/debsign.*/*.{dsc,changes,buildinfo}.asc rw,
+
+  }
+
+  include if exists <local/debsign>
+}

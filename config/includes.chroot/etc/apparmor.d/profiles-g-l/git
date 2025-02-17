@@ -1,0 +1,203 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{lib_dirs} = @{lib}/git/ @{lib}/git-core/
+@{code_config_dirs} = @{user_config_dirs}/Code* @{HOME}/.vscode{,-oss}
+
+@{exec_path}  = @{bin}/git @{bin}/git-*
+@{exec_path} += @{lib_dirs}/git @{lib_dirs}/git-* @{lib_dirs}/mergetools/*
+profile git @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  signal (send) peer=aurpublish,
+
+  @{exec_path} mrix,
+
+  # When you mistype a command, git checks the $PATH variable and search its exec dirs to give you
+  # the most similar commands, which it thinks can be used instead. Git binaries are all under
+  # /usr/bin/ , so allow only this location.
+  @{bin}/ r,
+  deny @{bin}/*/ r,
+  deny /usr/games/ r,
+  deny /usr/local/{s,}bin/ r,
+  deny /usr/local/games/ r,
+  deny /var/lib/flatpak/exports/bin/ r,
+  deny owner @{HOME}/.go/bin/ r,
+  deny owner @{user_bin_dirs}/ r,
+
+  # These are needed for "git submodule update"
+  @{sh_path}         rix,
+  @{bin}/{,e}grep    rix,
+  @{bin}/basename    rix,
+  @{bin}/cat         rix,
+  @{bin}/cat         rix,
+  @{bin}/date        rix,
+  @{bin}/dirname     rix,
+  @{bin}/envsubst    rix,
+  @{bin}/gettext     rix,
+  @{bin}/gettext.sh  rix,
+  @{bin}/hostname    rix,
+  @{bin}/mkdir       rix,
+  @{bin}/mv          rix,
+  @{bin}/rm          rix,
+  @{bin}/sed         rix,
+  @{bin}/uname       rix,
+  @{bin}/wc          rix,
+  @{bin}/whoami      rix,
+
+  @{bin}/pager       rPx -> child-pager,
+  @{bin}/less        rPx -> child-pager,
+  @{bin}/more        rPx -> child-pager,
+
+  @{bin}/man         rPx,
+  @{bin}/meld       rPUx,
+  @{lib}/code/extensions/git/dist/askpass.sh rPx,
+  @{lib}/code/extensions/git/dist/git-editor.sh rPx,
+  /usr/share/aurpublish/*.hook rPx,
+
+  @{bin}/gpg{,2}         rCx -> gpg,
+  @{bin}/ssh             rCx -> ssh,
+  @{bin}/sensible-editor rCx -> editor,
+  @{bin}/vim             rCx -> editor,
+  @{bin}/vim.*           rCx -> editor,
+  
+  /usr/share/git{,-core}/{,**} r,
+  /usr/share/terminfo/** r,
+
+  /etc/gitconfig r,
+  /etc/mailname r,
+
+  owner @{user_projects_dirs}/   rw,
+  owner @{user_projects_dirs}/** rwkl -> @{user_projects_dirs}/**,
+  owner @{user_projects_dirs}/**/.git/hooks/* rix,
+
+  owner @{user_cache_dirs}/*/ rw,
+  owner @{user_cache_dirs}/*/** rwkl -> @{user_cache_dirs}/*/**,
+
+  owner /tmp/**        rwkl -> /tmp/**,
+  owner /tmp/**/bin/*  rCx -> exec,
+
+  owner @{HOME}/.gitconfig* rw,
+  owner @{HOME}/.netrc r,
+  owner @{user_config_dirs}/git/{,*} rw,
+
+  owner /tmp/git-difftool.*/ rw,             # For diffs
+  owner /tmp/git-difftool.*/right/{,**} rw,
+  owner /tmp/git-difftool.*/left/{,**} rw,
+  owner /tmp/* rw,
+  owner /tmp/tmp*/ rw,                       # For TWRP-device-tree-generator
+  owner /tmp/tmp*/** rwkl -> /tmp/tmp*/**,
+  owner /tmp/.git_vtag_tmp@{rand6} rw,       # For git log --show-signature
+  owner /tmp/git-commit-msg-.txt rw,         # For android studio
+
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+  deny /dev/shm/.org.chromium.Chromium* rw,
+  deny owner @{code_config_dirs}/** rw,
+
+  profile gpg {
+    include <abstractions/base>
+    include <abstractions/consoles>
+
+    @{bin}/gpg{,2}     mr,
+    @{bin}/gpg-agent  rPx,
+
+    owner @{HOME}/@{XDG_GPG_DIR}/ rw,
+    owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+    owner /tmp/.git_vtag_tmp@{rand6} r,
+
+    deny @{user_share_dirs}/gvfs-metadata/* r,
+
+    include if exists <local/git_gpg>
+  }
+
+  profile ssh {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+    include <abstractions/openssl>
+
+    network inet dgram,
+    network inet6 dgram,
+    network inet stream,
+    network inet6 stream,
+    network netlink raw,
+
+    @{bin}/ssh mr,
+
+    /etc/ssh/ssh_config.d/{,*} r,
+    /etc/ssh/ssh_config r,
+
+    owner @{HOME}/@{XDG_SSH_DIR}/* r,
+    owner @{HOME}/@{XDG_SSH_DIR}/known_hosts{,.*} rw,
+    owner @{HOME}/@{XDG_SSH_DIR}/known_hosts.old rwl,
+
+    owner /tmp/git@*:@{int} rwl -> /tmp/git@*:@{int}.*,
+    owner /tmp/ssh-*/agent.@{int} rw,
+
+    owner @{PROC}/@{pid}/fd/ r,
+
+    deny @{user_share_dirs}/gvfs-metadata/* r,
+
+    include if exists <local/git_ssh>
+  }
+
+  profile exec {
+    include <abstractions/base>
+
+    owner @{user_build_dirs}/**/bin/* mr,
+
+    include if exists <local/git_exec>
+  }
+
+  profile editor {
+    include <abstractions/base>
+    include <abstractions/fzf>
+    include <abstractions/nameservice-strict>
+
+    @{bin}/sensible-editor mr,
+    @{bin}/vim             mrix,
+    @{bin}/vim.*           mrix,
+    @{sh_path}              rix,
+    @{bin}/which{,.debianutils}            rix,
+
+    /usr/share/vim/{,**} r,
+    /usr/share/terminfo/** r,
+
+    /etc/vimrc r,
+    /etc/vim/{,**} r,
+
+    owner @{user_projects_dirs}/**/ r,
+    owner @{user_projects_dirs}/**/.git/@{int} rw,
+    owner @{user_projects_dirs}/**/.git/*MSG rw,
+
+    owner @{HOME}/.selected_editor r,
+    owner @{HOME}/.viminfo{,.tmp} rw,
+
+    owner @{user_cache_dirs}/vim/{,**} rw,
+    owner @{user_config_dirs}/vim/{,**} r,
+
+    # The git repository files
+    owner @{user_build_dirs}/ r,
+    owner @{user_build_dirs}/** rw,
+
+    include if exists <local/git_editor>
+  }
+
+  include if exists <local/git>
+}

@@ -1,0 +1,58 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/spice-vdagent
+profile spice-vdagent @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/bus/org.freedesktop.RealtimeKit1>
+  include <abstractions/bus/org.gnome.Mutter.DisplayConfig>
+  include <abstractions/dri>
+  include <abstractions/fontconfig-cache-write>
+  include <abstractions/fonts>
+  include <abstractions/gtk>
+  include <abstractions/nameservice-strict>
+  include <abstractions/X-strict>
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+
+  dbus send bus=session path=/org/freedesktop/portal/desktop
+       interface=org.freedesktop.portal.Realtime
+       member=MakeThreadRealtimeWithPID
+       peer=(name=org.freedesktop.portal.Desktop, label=xdg-desktop-portal),
+
+  dbus receive bus=session path=/
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect 
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  /usr/share/pipewire/client-rt.conf r,
+
+  /etc/pipewire/client.conf r,
+
+  /var/lib/gdm{3,}/.config/pulse/cookie rk,
+  /var/lib/gdm{3,}/.config/user-dirs.dirs r,
+
+  /var/lib/nscd/passwd r,
+
+  owner @{user_config_dirs}/user-dirs.dirs r,
+
+        @{run}/spice-vdagentd/spice-vdagent-sock rw,
+  owner @{run}/user/@{uid}/pipewire-@{int} rw,
+
+  owner @{PROC}/@{pids}/task/@{tid}/comm rw,
+
+  include if exists <local/spice-vdagent>
+}

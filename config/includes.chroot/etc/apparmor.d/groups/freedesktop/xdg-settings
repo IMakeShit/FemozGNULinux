@@ -1,0 +1,77 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xdg-settings
+profile xdg-settings @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} r,
+
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/basename   rix,
+  @{bin}/cat        rix,
+  @{bin}/cut        rix,
+  @{bin}/mktemp     rix,
+  @{bin}/mv         rix,
+  @{bin}/readlink   rix,
+  @{bin}/realpath   rix,
+  @{bin}/sed        rix,
+  @{bin}/sort       rix,
+  @{bin}/uname      rix,
+  @{bin}/wc         rix,
+  @{bin}/which{,.debianutils}      rix,
+
+  @{bin}/dbus-launch  rCx -> dbus,
+  @{bin}/dbus-send    rCx -> dbus,
+  @{bin}/kreadconfig5 rPx,
+  @{bin}/xdg-mime     rPx,
+  @{bin}/xprop        rPx,
+
+  /usr/share/terminfo/** r,
+
+  /etc/xdg/xfce4/helpers.rc r,
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  /var/lib/flatpak/exports/share/applications/{,*} r,
+  /var/lib/snapd/desktop/applications/{,*} r,
+
+  # freedesktop.org-strict
+  /usr/{,local/}share/applications/{,*} r,
+  /usr/{,local/}share/ubuntu/applications/ r,
+  owner @{user_share_dirs}/applications/ r,
+  owner @{user_share_dirs}/applications/*.desktop r,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/.Xauthority r,
+
+  owner @{user_config_dirs}/xfce4/helpers.rc{,.*} rw,
+
+  owner @{run}/user/@{uid}/ r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  profile dbus {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    @{bin}/dbus-launch   mr,
+    @{bin}/dbus-send     mr,
+    @{bin}/dbus-daemon  rPx,
+
+    # for dbus-launch
+    owner @{HOME}/.dbus/session-bus/@{hex}-[0-9] w,
+
+    @{HOME}/.Xauthority r,
+  }
+
+  include if exists <local/xdg-settings>
+}

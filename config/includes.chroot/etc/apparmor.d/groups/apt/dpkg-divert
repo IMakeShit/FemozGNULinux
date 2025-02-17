@@ -1,0 +1,28 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dpkg-divert
+profile dpkg-divert @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  /var/lib/dpkg/** r,
+
+  /usr/share/*/** w,
+
+  /var/lib/dpkg/diversions rw,
+  /var/lib/dpkg/diversions-new rw,
+  /var/lib/dpkg/diversions-old rwl -> /var/lib/dpkg/diversions,
+
+  /etc/** rw,
+
+  include if exists <local/dpkg-divert>
+}

@@ -1,0 +1,35 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{FT_LIBDIR} =  @{lib}/freetube
+@{FT_LIBDIR} += @{lib}/freetube-vue
+@{FT_LIBDIR} += /opt/FreeTube
+@{FT_LIBDIR} += /opt/FreeTube-Vue
+
+@{exec_path} = @{FT_LIBDIR}/chrome-sandbox
+profile freetube-chrome-sandbox @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability sys_admin,
+  capability setgid,
+  capability setuid,
+  capability sys_chroot,
+
+  @{exec_path} mr,
+
+  # Has to be lower "P"
+  @{FT_LIBDIR}/freetube{,-vue} rpx,
+
+             @{PROC}/@{pids}/ r,
+       owner @{PROC}/@{pid}/oom_{,score_}adj r,
+  deny owner @{PROC}/@{pid}/oom_{,score_}adj w,
+
+  include if exists <local/freetube-chrome-sandbox>
+}

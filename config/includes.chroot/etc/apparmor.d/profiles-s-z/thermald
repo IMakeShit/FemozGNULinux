@@ -1,0 +1,84 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2015-2020 Mikhail Morfikov
+# Copyright (C) 2022 Jeroen Rijken
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/thermald
+profile thermald @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/net.hadess.PowerProfiles>
+  include <abstractions/bus/org.freedesktop.UPower>
+
+  capability sys_boot,
+  
+  # dbus: own bus=system name=org.freedesktop.thermald
+
+  @{exec_path} mr,
+
+  /etc/thermald/{,*} r,
+
+  owner @{run}/thermald/ rw,
+  owner @{run}/thermald/thd_preference.conf rw,
+  owner @{run}/thermald/thd_preference.conf.save w,
+  owner @{run}/thermald/thermald.pid rwk,
+
+  @{sys}/class/hwmon/ r,
+  @{sys}/class/thermal/ r,
+  @{sys}/devices/platform/ r,
+  @{sys}/devices/platform/** r,
+
+  @{sys}/devices/system/cpu/present r,
+  @{sys}/devices/system/cpu/intel_pstate/max_perf_pct rw,
+  @{sys}/devices/system/cpu/intel_pstate/no_turbo rw,
+  @{sys}/devices/system/cpu/intel_pstate/status r,
+
+  @{sys}/devices/@{pci}/drm/**/intel_backlight/max_brightness r,
+  @{sys}/devices/@{pci}/power_limits/power_limit_@{int}_max_uw r,
+  @{sys}/devices/@{pci}/power_limits/power_limit_@{int}_min_uw r,
+  @{sys}/devices/@{pci}/power_limits/power_limit_@{int}_tmax_us r,
+  @{sys}/devices/@{pci}/power_limits/power_limit_@{int}_tmin_us r,
+
+  @{sys}/devices/**/hwmon@{int}/ r,
+  @{sys}/devices/**/hwmon@{int}/name r,
+  @{sys}/devices/**/hwmon@{int}/temp@{int}_{max,crit} r,
+  @{sys}/devices/**/path r,
+
+  @{sys}/devices/platform/*/uuids/current_uuid rw,
+
+  @{sys}/devices/virtual/dmi/id/product_name r,
+  @{sys}/devices/virtual/dmi/id/product_uuid r,
+
+  @{sys}/devices/virtual/thermal/**/{type,temp} r,
+
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/ r,
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/mode rw,
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/policy rw,
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/trip_point_@{int}_temp rw,
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/trip_point_@{int}_type r,
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/trip_point_@{int}_hyst r,
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/cdev@{int}_trip_point r,
+
+  @{sys}/devices/virtual/thermal/cooling_device[@{int}/ r,
+  @{sys}/devices/virtual/thermal/cooling_device@{int}/cur_state rw,
+  @{sys}/devices/virtual/thermal/cooling_device@{int}/max_state r,
+
+  @{sys}/devices/virtual/powercap/intel-rapl{,-mmio}/ r,
+  @{sys}/devices/virtual/powercap/intel-rapl{,-mmio}/**/name r,
+  @{sys}/devices/virtual/powercap/intel-rapl{,-mmio}/intel-rapl{,-mmio}:@{int}/ r,
+  @{sys}/devices/virtual/powercap/intel-rapl{,-mmio}/intel-rapl{,-mmio}:@{int}/* r,
+  @{sys}/devices/virtual/powercap/intel-rapl{,-mmio}/intel-rapl{,-mmio}:@{int}/constraint_* w,
+  @{sys}/devices/virtual/powercap/intel-rapl{,-mmio}/intel-rapl{,-mmio}:@{int}/enabled w,
+  @{sys}/devices/virtual/powercap/intel-rapl{,-mmio}/intel-rapl{,-mmio}:@{int}/intel-rapl:@{int}/{,*} r,
+
+  /dev/acpi_thermal_rel rw,
+  /dev/input/ r,
+  /dev/input/event@{int} r,
+
+  include if exists <local/thermald>
+}

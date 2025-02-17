@@ -1,0 +1,42 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/wpa_action
+profile wpa-action @{exec_path} {
+  include <abstractions/base>
+
+  capability net_admin,
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{bin}/wpa_cli   rPx,
+
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/cat        rix,
+  @{bin}/date       rix,
+  @{bin}/ifup       rix,
+  @{bin}/ip         rix,
+  @{bin}/ln         rix,
+  @{bin}/logger     rix,
+  @{bin}/rm         rix,
+
+  /etc/wpa_supplicant/{,**} r,
+  /etc/network/interfaces r,
+  /etc/network/interfaces.d/{,*} r,
+
+  owner @{run}/wpa_action.wlan@{int}.ifupdown rw,
+  owner @{run}/wpa_action.wlan@{int}.timestamp rw,
+  owner @{run}/network/ifstate.wlan@{int} rwk,
+  owner @{run}/sendsigs.omit.d/wpasupplicant.wpa_supplicant.wlan@{int}.pid rw,
+
+  include if exists <local/wpa-action>
+}

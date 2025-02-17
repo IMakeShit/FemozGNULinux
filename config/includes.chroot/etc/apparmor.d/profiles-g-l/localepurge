@@ -1,0 +1,59 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/localepurge
+profile localepurge @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} r,
+
+  @{sh_path}        rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/basename   rix,
+  @{bin}/chmod      rix,
+  @{bin}/du         rix,
+  @{bin}/fgrep      rix,
+  @{bin}/find       rix,
+  @{bin}/ls         rix,
+  @{bin}/mkdir      rix,
+  @{bin}/mv         rix,
+  @{bin}/rm         rix,
+  @{bin}/sort       rix,
+  @{bin}/touch      rix,
+  @{bin}/tr         rix,
+  @{bin}/xargs      rix,
+
+  @{bin}/df         rPx,
+
+  # Dirs cleaned from locales
+  /usr/share/{gnome/,}help/{,**/} r,
+  /usr/share/{gnome/,}help/**/** w,
+  /usr/share/{locale,man,omf,calendar}/{,**/} r,
+  /usr/share/{locale,man,omf,calendar}/**/** w,
+  /usr/share/aptitude/{,*} r,
+  /usr/share/aptitude/* w,
+  /usr/share/cups/{templates,locale,doc-root}/{,**/} r,
+  /usr/share/cups/{templates,locale,doc-root}/**/** w,
+  /usr/share/vim/ r,
+  /usr/share/vim/vim@{int}/lang/{,**/} r,
+  /usr/share/vim/vim@{int}/lang/**/** w,
+  /usr/share/X11/locale/**/** w,
+
+  /etc/locale.nopurge r,
+
+  owner /var/cache/localepurge/localelist r,
+  owner /var/cache/localepurge/localelist-new{,.temp} rw,
+
+  /tmp/ r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/localepurge>
+}

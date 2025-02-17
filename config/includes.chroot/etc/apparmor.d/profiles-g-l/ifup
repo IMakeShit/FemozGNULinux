@@ -1,0 +1,131 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/{ifup,ifdown,ifquery}
+profile ifup @{exec_path} {
+  include <abstractions/base>
+
+  capability net_admin,
+  audit capability sys_module,
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{sh_path}        rix,
+  @{bin}/ip         rix,
+  @{bin}/route      rix,
+  @{bin}/seq        rix,
+  @{bin}/sleep      rix,
+  @{bin}/wc         rix,
+
+  @{bin}/dhclient      rPx,
+  @{bin}/macchanger    rPx,
+
+  @{lib}/ifupdown/*.sh rix,
+
+  @{bin}/run-parts  rCx -> run-parts,
+  @{bin}/kmod       rCx -> kmod,
+  @{bin}/sysctl     rCx -> sysctl,
+
+  /etc/network/interfaces r,
+  /etc/network/interfaces.d/{,*} r,
+  /etc/iproute2/rt_scopes r,
+
+  @{run}/network/ rw,
+  @{run}/network/{.,}ifstate* rwk,
+  @{run}/network/{ifup,ifdown}-*.pid rw,
+  @{run}/network/interfaces.d/{,*} r,
+
+  # For setting a USB modem
+  owner /dev/ttyUSB[0-9]* rw,
+
+
+  profile run-parts {
+    include <abstractions/base>
+
+    @{bin}/run-parts mr,
+
+    @{lib}/bridge-utils/ifupdown.sh       rPUx,
+
+    /etc/network/if-down.d/ r,
+    /etc/network/if-down.d/resolvconf          rPUx,
+    /etc/network/if-down.d/resolved            rPUx,
+    /etc/network/if-down.d/openvpn             rPUx,
+    /etc/network/if-down.d/wpasupplicant       rPUx,
+    /etc/wpa_supplicant/ifupdown.sh            rPUx,
+
+    /etc/network/if-post-down.d/ r,
+    /etc/network/if-post-down.d/bridge         rPUx,
+    /etc/network/if-post-down.d/hostapd        rPUx,
+    /etc/network/if-post-down.d/chrony         rPUx,
+    /etc/hostapd/ifupdown.sh                   rPUx,
+    /etc/network/if-post-down.d/ifenslave      rPUx,
+    /etc/network/if-post-down.d/macchanger     rPUx,
+    /etc/macchanger/ifupdown.sh                rPUx,
+    /etc/network/if-post-down.d/wireless-tools rPUx,
+    /etc/network/if-post-down.d/wpasupplicant  rPUx,
+
+    /etc/network/if-pre-up.d/ r,
+    /etc/network/if-pre-up.d/bridge            rPUx,
+    /etc/network/if-pre-up.d/ethtool           rPUx,
+    /etc/network/if-pre-up.d/hostapd           rPUx,
+    /etc/network/if-pre-up.d/ifenslave         rPUx,
+    /etc/network/if-pre-up.d/macchanger        rPUx,
+    /etc/network/if-pre-up.d/wireless-tools    rPUx,
+    /etc/network/if-pre-up.d/wpasupplicant     rPUx,
+    # For stable-privacy IPv6 addresses
+    /etc/network/if-pre-up.d/random-secret     rPUx,
+
+    /etc/network/if-up.d/ r,
+    /etc/network/if-up.d/*resolvconf           rPUx,
+    /etc/network/if-up.d/resolved	       rPUx,
+    /etc/network/if-up.d/chrony                rPUx,
+    /etc/network/if-up.d/ethtool               rPUx,
+    /etc/network/if-up.d/ifenslave             rPUx,
+    /etc/network/if-up.d/openvpn               rPUx,
+    /etc/network/if-up.d/wpasupplicant         rPUx,
+
+  }
+
+  profile kmod {
+    include <abstractions/base>
+
+    @{bin}/kmod mr,
+
+    @{sys}/module/** r,
+
+    @{PROC}/cmdline r,
+    @{PROC}/modules r,
+
+    /etc/modprobe.d/ r,
+    /etc/modprobe.d/*.conf r,
+
+  }
+
+  profile sysctl {
+    include <abstractions/base>
+
+#    capability mac_admin,
+   capability net_admin,
+   capability sys_admin,
+#    capability sys_resource,
+
+    @{bin}/sysctl mr,
+
+    @{PROC}/sys/ r,
+    @{PROC}/sys/** r,
+
+    @{PROC}/sys/net/ipv6/conf/*/accept_ra rw,
+    @{PROC}/sys/net/ipv6/conf/*/autoconf rw,
+
+  }
+
+  include if exists <local/ifup>
+}

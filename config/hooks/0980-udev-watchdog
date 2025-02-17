@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+# Compile and install a custom udev-watchdog program
+# Из Tails
+# Модифицировано 
+echo "Compiling and installing a custom udev-watchdog program"
+
+apt install build-essential gcc binutils libudev-dev libudev1 libudev0 -y
+
+SRC="/usr/src/udev-watchdog.c"
+DST="/usr/local/sbin/udev-watchdog"
+
+gcc -o "$DST" "$SRC" -Wall -ludev -lrt
+strip --strip-all "$DST"

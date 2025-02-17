@@ -1,0 +1,76 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/sddm-greeter
+profile sddm-greeter @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/bus/org.freedesktop.UPower>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/graphics>
+  include <abstractions/kde-strict>
+  include <abstractions/nameservice-strict>
+  include <abstractions/qt5-compose-cache-write>
+  include <abstractions/qt5-shader-cache>
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{lib}/libheif/ r,
+  @{lib}/libheif/*.so* rm,
+
+  /usr/share/desktop-base/softwaves-theme/login/*.svg r,
+  /usr/share/plasma/desktoptheme/** r,
+  /usr/share/qt5ct/** r,
+  /usr/share/sddm/{,**} r,
+  /usr/share/wayland-sessions/{,*.desktop} r,
+  /usr/share/xsessions/{,*.desktop} r,
+  /usr/share/wallpapers/{,**} r,
+  /usr/share/hunspell/** r,
+
+  /etc/fstab r,
+  /etc/machine-id r,
+  /etc/sddm.conf r,
+  /etc/sddm.conf.d/{,*} r,
+  /etc/xdg/plasmarc r,
+  /var/lib/AccountsService/icons/*.icon r,
+  /var/lib/dbus/machine-id r,
+
+  owner /var/lib/sddm/** rw,
+  owner /var/lib/sddm/#@{int} mrw,
+  owner /var/lib/sddm/.cache/** mrwkl -> /var/lib/sddm/.cache/**,
+        /var/lib/sddm/state.conf r,
+
+  owner @{user_cache_dirs}/ rw,
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+  owner @{user_cache_dirs}/plasma_theme_*.kcache rw,
+  owner @{user_cache_dirs}/plasma-svgelements-* rw,
+  owner @{user_cache_dirs}/sddm-greeter/{,**} rwl,
+
+  owner @{user_config_dirs}/plasmarc r,
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+
+  # If one is blocked, the others are probed.
+  deny owner @{HOME}/#@{int} mrw,
+       owner @{HOME}/.glvnd* mrw,
+
+  owner /tmp/runtime-sddm/ rw,
+  owner /tmp/sddm-:@{int}-@{rand6} rw,
+
+  owner @{run}/sddm/{,*} rw,
+
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/mounts r,
+        @{PROC}/sys/kernel/core_pattern r,
+
+  include if exists <local/sddm-greeter>
+}

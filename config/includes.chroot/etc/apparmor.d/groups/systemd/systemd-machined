@@ -1,0 +1,46 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/systemd/systemd-machined
+profile systemd-machined @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/systemd-common>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability kill,
+  capability mknod,
+  capability setgid,
+  capability sys_admin,
+  capability sys_chroot,
+  capability sys_ptrace,
+
+  # dbus: own bus=system name=org.freedesktop.machine1
+
+  # dbus: talk bus=system name=org.freedesktop.systemd1 label="@{systemd}"
+
+  @{exec_path} mr,
+
+  /var/lib/machines/{,**} rw,
+  /etc/machine-id r,
+
+  @{run}/systemd/machines/{,**} rw,
+  @{run}/systemd/userdb/io.systemd.Machine rw,
+  @{run}/systemd/notify w,
+
+  @{PROC}/@{pid}/cgroup r,
+  @{PROC}/pressure/cpu r,
+  @{PROC}/pressure/io r,
+  @{PROC}/pressure/memory r,
+
+  include if exists <local/systemd-machined>
+}

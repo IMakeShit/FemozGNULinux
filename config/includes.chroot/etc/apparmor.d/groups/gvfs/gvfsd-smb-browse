@@ -1,0 +1,54 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gvfs/}gvfsd-smb-browse
+profile gvfsd-smb-browse @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/nameservice-strict>
+
+  network netlink raw,
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+
+  dbus bind bus=session name=org.gtk.vfs.mountpoint_smb_browse,
+
+  dbus receive bus=session path=/org/gtk/vfs/mountable
+       interface=org.gtk.vfs.Mountable
+       member=Mount
+       peer=(name=:*, label=gvfsd),
+
+  dbus send bus=session path=/org/gtk/gvfs/exec_spaw/@{int}
+       interface=org.gtk.vfs.Spawner
+       member=Spawned
+       peer=(name=:*, label=gvfsd),
+
+  @{exec_path} mr,
+
+  /usr/share/glib-2.0/schemas/gschemas.compiled r,
+
+  /etc/samba/* r,
+
+        /var/cache/samba/ rw,
+        /var/lib/samba/** rwk,
+  owner /var/cache/samba/gencache.tdb w,
+
+  owner @{run}/samba/ rw,
+  owner @{run}/samba/gencache.tdb rwk,
+  owner @{run}/user/@{uid}/gvfsd/socket-@{rand8} rw,
+
+  owner @{user_cache_dirs}/samba/ w,
+  owner @{user_cache_dirs}/samba/gencache.tdb rwk,
+
+  include if exists <local/gvfsd-smb-browse>
+}

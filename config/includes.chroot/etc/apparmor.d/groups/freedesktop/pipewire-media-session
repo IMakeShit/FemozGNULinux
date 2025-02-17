@@ -1,0 +1,74 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2015-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pipewire-media-session
+profile pipewire-media-session @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.RealtimeKit1>
+  include <abstractions/devices-usb>
+  include <abstractions/nameservice-strict>
+  include <abstractions/video>
+
+  network bluetooth raw,
+  network bluetooth seqpacket,
+  network bluetooth stream,
+  network netlink raw,
+
+  signal (receive) set=(cont term) peer=@{systemd_user},
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member=GetConnectionUnixProcessID
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  /usr/share/alsa-card-profile/{,**} r,
+  /usr/share/pipewire/*.conf r,
+  /usr/share/pipewire/media-session.d/{,**} r,
+  /usr/share/spa-*/bluez@{int}/{,*} r,
+
+  /etc/pipewire/*.conf r,
+  /etc/pipewire/media-session.d/*.conf r,
+
+  /var/lib/gdm{3,}/.local/state/pipewire/media-session.d/* rw,
+
+  owner @{user_state_dirs}/ rw,
+  owner @{user_state_dirs}/pipewire/{,**} rw,
+
+  owner @{user_config_dirs}/pipewire-media-session/ w,
+  owner @{user_config_dirs}/pipewire/ rw,
+  owner @{user_config_dirs}/pipewire/** rw,
+  owner @{user_config_dirs}/pulse/ rw,
+
+  owner @{run}/user/@{uid}/pipewire-@{int} rw,
+
+  @{run}/udev/data/c116:@{int} r,         # for ALSA
+
+  @{run}/systemd/users/@{uid} r,
+
+  @{sys}/devices/**/sound/**/uevent r,
+  @{sys}/devices/@{pci}/sound/**/pcm_class r,
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node@{int}/meminfo r,
+
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+  /dev/snd/ r,
+
+  include if exists <local/pipewire-media-session>
+}

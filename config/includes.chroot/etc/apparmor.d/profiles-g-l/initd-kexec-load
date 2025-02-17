@@ -1,0 +1,80 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /etc/init.d/kexec-load
+profile initd-kexec-load @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/{,e}grep   rix,
+  @{bin}/cat        rix,
+  @{bin}/{m,g,}awk  rix,
+  @{bin}/cut        rix,
+  @{bin}/tail       rix,
+  @{bin}/sed        rix,
+  @{bin}/head       rix,
+  @{bin}/rm         rix,
+  @{bin}/readlink   rix,
+  @{bin}/tput       rix,
+
+  @{bin}/kexec      rPx,
+
+  @{bin}/run-parts  rCx -> run-parts,
+  @{bin}/systemctl  rCx -> systemctl,
+
+  /no-kexec-reboot rw,
+
+  /etc/default/kexec r,
+
+  @{sys}/kernel/kexec_loaded r,
+
+  owner /boot/grub/{grub.cfg,grubenv} r,
+
+  @{PROC}/cmdline r,
+
+
+  profile run-parts {
+    include <abstractions/base>
+
+    @{bin}/run-parts mr,
+
+    /etc/default/kexec.d/ r,
+
+  }
+
+  profile systemctl {
+    include <abstractions/base>
+    include <abstractions/wutmp>
+
+    capability sys_resource,
+
+    ptrace (read),
+
+    @{bin}/systemctl mr,
+
+    @{bin}/systemd-tty-ask-password-agent rix,
+
+    owner @{PROC}/@{pid}/stat r,
+    owner @{PROC}/@{pid}/fd/ r,
+          @{PROC}/sys/kernel/osrelease r,
+          @{PROC}/1/sched r,
+          @{PROC}/1/environ r,
+          @{PROC}/cmdline r,
+
+    /dev/kmsg w,
+
+    owner @{run}/systemd/ask-password/ rw,
+    owner @{run}/systemd/ask-password-block/* rw,
+
+  }
+
+  include if exists <local/initd-kexec-load>
+}

@@ -1,0 +1,38 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/apt-forktracer
+profile apt-forktracer @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/python>
+
+  @{exec_path} mr,
+
+  @{bin}/ r,
+  @{bin}/dpkg      rPx -> child-dpkg,
+  @{bin}/apt-cache rPx,
+
+  /usr/share/apt-forktracer/{,**} r,
+  /usr/share/distro-info/debian.csv r,
+
+  /etc/debian_version r,
+  /etc/dpkg/origins/debian r,
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  /var/lib/apt/lists/ r,
+  /var/lib/apt/lists/*_InRelease r,
+
+  /var/cache/apt/pkgcache.bin{,.*} rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/apt-forktracer>
+}

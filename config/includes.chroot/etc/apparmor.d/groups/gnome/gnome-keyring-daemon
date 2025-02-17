@@ -1,0 +1,67 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gnome-keyring-daemon
+profile gnome-keyring-daemon @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.login1.Session>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/bus/org.gnome.SessionManager>
+  include <abstractions/openssl>
+
+  capability ipc_lock,
+
+  signal (receive) set=(cont, term) peer=systemd-user,
+  signal (receive) set=(term) peer=gdm,
+  signal (send) set=(term) peer=ssh-agent,
+
+  # dbus: own bus=session name=org.gnome.keyring
+  # dbus: own bus=session name=org.freedesktop.{S,s}ecret{,s}
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  dbus send bus=system path=/org/freedesktop/login1
+       interface=org.freedesktop.login1.Manager
+       member=GetSession
+       peer=(name=org.freedesktop.login1, label=systemd-logind),
+
+  @{exec_path} mr,
+
+  @{bin}/ssh-add   rix,
+  @{bin}/ssh-agent rPx,
+
+  /etc/gcrypt/hwf.deny r,
+
+  /var/lib/gdm{3,}/.local/ rw,
+  /var/lib/gdm{3,}/.local/share/ rw,
+  /var/lib/gdm{3,}/.local/share/keyrings/ rw,
+
+  # Keyrings location
+  owner @{user_share_dirs}/keyrings/ rw,
+  owner @{user_share_dirs}/keyrings/* rwl,
+
+  # Seahorse and SSH keys
+  owner @{HOME}/@{XDG_SSH_DIR}/{,**} r,
+
+  owner @{HOME}/.local/ w,
+  owner @{user_share_dirs}/ w,
+  owner @{run}/user/@{uid}/keyring/ rw,
+  owner @{run}/user/@{uid}/keyring/* rw,
+  owner @{run}/user/@{uid}/ssh-askpass.[0-9A-Z]*/{,*} rw,
+        @{run}/user/@{uid}/keyring/control r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/gnome-keyring-daemon>
+}

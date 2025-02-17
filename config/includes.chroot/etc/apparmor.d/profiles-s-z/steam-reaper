@@ -1,0 +1,37 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{steam_lib_dirs} = @{user_share_dirs}/Steam/ubuntu[0-9]*_{32,64}
+@{exec_path} = @{steam_lib_dirs}/reaper
+profile steam-reaper @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nvidia>
+
+  unix (receive) type=stream,
+
+  @{exec_path} mr,
+
+  @{steam_lib_dirs}/*.so*  mr,
+  @{steam_lib_dirs}/steam-runtime/{usr/,}lib/**.so*  mr,
+  @{steam_lib_dirs}/steam-launch-wrapper rpx -> steam-game,
+
+  @{user_share_dirs}/Steam/steamapps/common/*/* rpx -> steam-game,
+
+  owner @{HOME}/.steam/steam.pipe r,
+
+  owner @{user_share_dirs}/Steam/userdata/**/remotecache.vdf rw,
+
+  owner /dev/shm/u@{uid}-Shm_@{hex} rw,
+  owner /dev/shm/u@{uid}-ValveIPCSharedObj-Steam rwk,
+
+  @{sys}/devices/system/cpu/cpu@{int}/** r,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/steam-reaper>
+}

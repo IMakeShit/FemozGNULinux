@@ -1,0 +1,36 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/apt-extracttemplates
+profile apt-extracttemplates @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/apt-common>
+
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{bin}/dpkg rPx -> child-dpkg,
+
+  /var/cache/apt/ r,
+  /var/cache/apt/** rwk,
+
+  # For package building
+  @{user_build_dirs}/** rwkl -> @{user_build_dirs}/**,
+
+  owner /var/log/unattended-upgrades/unattended-upgrades-dpkg.log rw,
+
+  owner /tmp/*.{config,template}.@{rand6} rw,
+  owner /var/cache/debconf/tmp.ci/*.{config,template}.@{rand6} rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/apt-extracttemplates>
+}

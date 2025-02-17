@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path}  = @{bin}/check-bios-nx
+profile check-bios-nx @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  # To remove the following errors:
+  #  /usr/sbin/check-bios-nx: 19: cannot create /dev/stderr: Permission denied
+  capability dac_override,
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/uname      rix,
+  @{bin}/{,e}grep   rix,
+  @{bin}/getopt     rix,
+
+  @{bin}/kmod       rCx -> kmod,
+
+  @{bin}/rdmsr  rPx,
+
+  owner @{PROC}/@{pid}/fd/2 w,
+
+
+  profile kmod {
+    include <abstractions/base>
+
+    @{bin}/kmod mr,
+
+    /etc/modprobe.d/ r,
+    /etc/modprobe.d/*.conf r,
+    @{lib}/modprobe.d/ r,
+    @{lib}/modprobe.d/*.conf r,
+    @{lib}/modules/*/modules.* r,
+
+    @{PROC}/cmdline r,
+
+  }
+
+  include if exists <local/check-bios-nx>
+}

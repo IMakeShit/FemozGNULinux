@@ -1,0 +1,32 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/eject
+profile eject @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/disks-write>
+
+  capability sys_admin,
+  capability sys_rawio,
+
+  @{exec_path} mr,
+
+  @{sh_path}        rix,
+
+  @{lib}/eject/dmcrypt-get-device rPx,
+
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  /etc/fstab r,
+
+  @{run}/mount/utab r,
+
+  include if exists <local/eject>
+}

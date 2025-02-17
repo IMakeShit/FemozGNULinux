@@ -1,0 +1,35 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/landscape/landscape-sysinfo.wrapper
+profile landscape-sysinfo.wrapper @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  @{sh_path}                rix,
+  @{bin}/bc                 rix,
+  @{bin}/cat                rix,
+  @{bin}/chmod              rix,
+  @{bin}/cut                rix,
+  @{bin}/date               rix,
+  @{bin}/find               rix,
+  @{bin}/grep               rix,
+  @{bin}/landscape-sysinfo  rPx,
+
+  / r,
+  /etc/default/locale r,
+  
+  /var/lib/landscape/landscape-sysinfo.cache rw,
+
+  @{PROC}/loadavg r,
+
+  /dev/tty@{int} rw,
+
+  include if exists <local/landscape-sysinfo.wrapper>
+}

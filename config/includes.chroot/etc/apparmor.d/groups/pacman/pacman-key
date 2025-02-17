@@ -1,0 +1,73 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pacman-key
+profile pacman-key @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability dac_read_search,
+  capability mknod,
+
+  @{exec_path} mr,
+
+  @{bin}/basename     rix,
+  @{bin}/bash         rix,
+  @{bin}/chmod        rix,
+  @{bin}/{m,g,}awk    rix,
+  @{bin}/gettext      rix,
+  @{bin}/gpg{,2}      rCx -> gpg,
+  @{bin}/grep         rix,
+  @{bin}/pacman-conf  rPx,
+  @{bin}/touch        rix,
+  @{bin}/tput         rix,
+  @{bin}/vercmp       rix,
+  @{bin}/wc           rix,
+
+  /usr/share/makepkg/{,**} r,
+  /usr/share/pacman/keyrings/{,*} r,
+  /usr/share/terminfo/** r,
+
+  /etc/pacman.d/gnupg/* rw,
+  
+  /dev/tty rw,
+
+  profile gpg {
+    include <abstractions/base>
+    include <abstractions/p11-kit>
+    include <abstractions/ssl_certs>
+
+    capability dac_read_search,
+    capability mknod,
+
+    network inet stream,
+    network inet6 stream,
+    network unix stream,
+
+    @{bin}/gpg{,2}     mr,
+    @{bin}/dirmngr    rix,
+    @{bin}/gpg-agent  rix,
+
+    /usr/share/pacman/keyrings/{,*} r,
+
+    /etc/pacman.d/gnupg/ rw,
+    /etc/pacman.d/gnupg/** rwkl,
+
+    @{HOME}/.gnupg/gpg.conf r,
+
+    owner @{PROC}/@{pid}/fd/ r,
+    owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+    owner @{PROC}/@{pid}/task/@{tid}/stat rw,
+
+   /dev/pts/@{int} rw,
+   /dev/tty@{int} rw,
+
+  }
+
+  include if exists <local/pacman-key>
+}

@@ -1,0 +1,40 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/auditd
+profile auditd @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability audit_control,
+  capability chown,
+  capability fsetid,
+  capability sys_nice,
+  capability sys_resource,
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  /etc/audit/{,**} r,
+
+  /etc/machine-id r,
+
+  /var/log/audit/{,**} rw,
+
+        @{run}/systemd/journal/dev-log w,
+  owner @{run}/auditd.pid rwl,
+  owner @{run}/auditd.state rw,
+
+  owner @{PROC}/@{pid}/attr/current r,
+  owner @{PROC}/@{pid}/loginuid r,
+  owner @{PROC}/@{pid}/oom_score_adj rw,
+  owner @{PROC}/@{pid}/sessionid r,
+
+  include if exists <local/auditd>
+}

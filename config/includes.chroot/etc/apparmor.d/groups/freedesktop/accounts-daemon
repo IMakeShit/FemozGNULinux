@@ -1,0 +1,80 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,accountsservice/}accounts-daemon
+profile accounts-daemon @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.PolicyKit1>
+  include <abstractions/nameservice-strict>
+  include <abstractions/wutmp>
+
+  capability dac_read_search,
+  capability setgid,
+  capability setuid,
+  capability sys_nice,
+  capability sys_ptrace,
+
+  ptrace (read) peer=unconfined,
+
+  # dbus: own bus=system name=org.freedesktop.Accounts
+
+  dbus send bus=system path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus
+       member={GetConnectionUnixUser,GetConnectionUnixProcessID}
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  @{exec_path} mr,
+
+  @{bin}/adduser     rPx,
+  @{bin}/cat         rix,
+  @{bin}/chage       rPx,
+  @{bin}/passwd      rPx,
+  @{bin}/chpasswd    rPx,
+  @{bin}/userdel     rPx,
+  @{bin}/usermod     rPx,
+  @{bin}/locale     rPUx,
+
+  /usr/share/language-tools/language-validate   rPx,
+  /usr/share/language-tools/set-language-helper rPUx,
+  /usr/share/language-tools/save-to-pam-env rPUx,
+
+  /usr/share/accountsservice/{,**} r,
+  /usr/share/dbus-1/interfaces/*.xml r,
+
+  /etc/default/locale r,
+  /etc/gdm{3,}/ r,
+  /etc/gdm{3,}/custom.conf{,.@{rand6}} rw,
+  /etc/gdm{3,}/daemon.conf{,.@{rand6}} rw,
+  /etc/machine-id r,
+  /etc/shadow r,
+  /etc/shells r,
+  /etc/sysconfig/displaymanager r,
+
+  owner /var/lib/AccountsService/ r,
+  owner /var/lib/AccountsService/** rw,
+
+        @{HOME}/ r,
+  owner @{HOME}/.pam_environment r,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/loginuid rw,
+        @{PROC}/@{pids}/loginuid r,
+        @{PROC}/@{pids}/cmdline r,
+        @{PROC}/1/environ r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/kernel/osrelease r,
+
+  # wtmp.d ?
+  /var/log/wtmp r,
+
+  owner /tmp/gnome-control-center-user-icon-@{rand6} rw,
+
+  include if exists <local/accounts-daemon>
+}

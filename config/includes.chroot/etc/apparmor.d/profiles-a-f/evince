@@ -1,0 +1,65 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/evince @{lib}/evinced
+profile evince @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/user-download-strict>
+  include <abstractions/user-read>
+  include <abstractions/user-write>
+
+  # also denies network mounts
+  deny network inet,
+  deny network inet6,
+
+  # dbus: own bus=session name=org.gnome.evince.Daemon
+
+  dbus send bus=session path=/org/gtk/vfs/metadata
+       interface=org.gtk.vfs.Metadata
+       member={Set,GetTreeFromDevice}
+       peer=(name=:*, label=gvfsd-metadata),
+
+  @{exec_path} rix,
+
+  @{sh_path}                 rix,
+  @{bin}/gio-launch-desktop  rPx,
+  @{open_path}               rPx -> child-open,
+
+  /usr/share/djvu/{,**} r,
+  /usr/share/evince/{,**} r,
+  /usr/share/ghostscript/{,**} r,
+  /usr/share/poppler/{,**} r,
+  /usr/share/thumbnailers/{,*} r,
+
+  owner @{user_share_dirs}/ r,
+  owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+  owner @{user_cache_dirs}/thumbnails/{,**} rw,
+  owner @{user_config_dirs}/evince/{,*} rw,
+
+  owner /tmp/*.pdf r,
+  owner /tmp/evince-*/{,**} rw,
+  owner /tmp/gtkprint* rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  /dev/tty rw,
+
+  deny @{lib}/ r, # asks when viewing PostScript files
+
+  include if exists <local/evince>
+}

@@ -1,0 +1,58 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/journalctl
+profile journalctl @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/systemd-common>
+
+  capability dac_override,
+  capability dac_read_search,
+  capability mknod,
+  capability net_admin,
+  capability sys_resource,
+
+  signal (receive) set=(term) peer=cockpit-bridge,
+  signal (send) peer=child-pager,
+
+  @{exec_path} mr,
+
+  @{bin}/less  rPx -> child-pager,
+  @{bin}/more  rPx -> child-pager,
+  @{bin}/pager rPx -> child-pager,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /var/lib/systemd/catalog/database rw,
+  /var/lib/systemd/catalog/.#database* rw,
+
+        /{run,var}/log/journal/ r,
+        /{run,var}/log/journal/@{md5}/ r,
+        /{run,var}/log/journal/@{md5}/system.journal* r,
+        /{run,var}/log/journal/@{md5}/system@@{hex}.journal* rw,
+        /{run,var}/log/journal/@{md5}/user-@{hex}.journal* rw,
+  owner /{run,var}/log/journal/@{md5}/fss wl -> /var/log/journal/@{md5}/fss.tmp.*,
+  owner /{run,var}/log/journal/@{md5}/fss.tmp.* rw,
+  owner /var/tmp/#@{int} rw,
+
+  @{run}/host/container-manager r,
+  @{run}/systemd/journal/io.systemd.journal rw,
+
+        @{PROC}/sys/fs/nr_open r,
+  owner @{PROC}/@{pid}/cgroup r,
+
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+  deny network inet stream,
+  deny network inet6 stream,
+
+  include if exists <local/systemd-journalctl>
+}

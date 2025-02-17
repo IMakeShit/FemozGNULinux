@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/gnome-session-ctl
+profile gnome-session-ctl @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+
+  signal (receive) set=(kill) peer=@{systemd},
+
+  unix (send, receive, connect) type=stream peer=(addr=@/tmp/dbus-????????, label=dbus-daemon),
+
+  dbus send bus=session path=/org/freedesktop/systemd1
+       interface=org.freedesktop.systemd1.Manager
+       member={StartUnit,StopUnit}
+       peer=(name=org.freedesktop.systemd1, label="@{systemd_user}"),
+
+  dbus send bus=session path=/org/gnome/SessionManager
+       interface=org.gnome.SessionManager
+       member=Initialized
+       peer=(name=org.gnome.SessionManager, label=gnome-session-binary),
+
+  @{exec_path} mr,
+
+        @{run}/user/@{uid}/systemd/notify  rw,
+  owner @{run}/user/@{uid}/gnome-session-leader-fifo r,
+
+  include if exists <local/gnome-session-ctl>
+}

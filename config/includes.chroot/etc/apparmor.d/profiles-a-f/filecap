@@ -1,0 +1,31 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/filecap
+profile filecap @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  # The default behavior is to check only the directories in the PATH environmental variable.
+  @{bin}/ r,
+  @{bin}/* r,
+  /usr/local/sbin/ r,
+  /usr/local/sbin/* r,
+  /usr/local/bin/ r,
+  /usr/local/bin/* r,
+
+  # It's also possible to check any dir/file in the system by using the "-a" flag.
+  #capability dac_read_search,
+  #/ r,
+  #/** r,
+
+  include if exists <local/filecap>
+}

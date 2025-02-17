@@ -1,0 +1,108 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/smtube
+profile smtube @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/opencl-intel>
+  include <abstractions/gtk>
+  include <abstractions/freedesktop.org>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/qt5-compose-cache-write>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+  include <abstractions/gstreamer>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink dgram,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  # SMTube config files
+  owner @{user_config_dirs}/smtube/ rw,
+  owner @{user_config_dirs}/smtube/* rwkl -> @{user_config_dirs}/smtube/#@{int},
+
+  # Needed for updating YT code
+  owner @{user_config_dirs}/smplayer/yt.js rw,
+
+  owner @{user_config_dirs}/smplayer/#@{int} rw,
+  owner @{user_config_dirs}/smplayer/hdpi.ini rw,
+  owner @{user_config_dirs}/smplayer/hdpi.ini.lock rwk,
+  owner @{user_config_dirs}/smplayer/hdpi.ini.* rwl -> @{user_config_dirs}/smplayer/#@{int},
+
+  # To configure Qt5 settings (theme, font, icons, etc.) under DE/WM without Qt integration
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+  /usr/share/qt5ct/** r,
+
+  # Cache
+  owner @{user_cache_dirs}/ rw,
+  owner @{user_cache_dirs}/smtube/ rw,
+  owner @{user_cache_dirs}/smtube/* rwk,
+
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  /usr/share/hwdata/pnp.ids r,
+
+  /dev/shm/#@{int} rw,
+
+  deny owner @{PROC}/@{pid}/cmdline r,
+       owner @{PROC}/@{pid}/fd/ r,
+  deny       @{PROC}/sys/kernel/random/boot_id r,
+
+  # Players
+  @{bin}/mpv        rPUx,
+  @{bin}/smplayer   rPUx,
+  @{bin}/vlc        rPUx,
+  @{bin}/cvlc       rPUx,
+  @{bin}/youtube-dl rPUx,
+  @{bin}/yt-dlp     rPUx,
+
+  @{bin}/xdg-open   rCx -> open,
+
+  # Allowed apps to open
+  @{lib}/firefox/firefox rPUx,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+
+
+  profile open {
+    include <abstractions/base>
+    include <abstractions/xdg-open>
+
+    @{bin}/xdg-open mr,
+
+    @{sh_path}             rix,
+    @{bin}/{m,g,}awk       rix,
+    @{bin}/readlink        rix,
+    @{bin}/basename        rix,
+
+    owner @{HOME}/ r,
+
+    owner @{run}/user/@{uid}/ r,
+
+    # Allowed apps to open
+    @{lib}/firefox/firefox rPUx,
+
+    # file_inherit
+    owner @{HOME}/.xsession-errors w,
+
+  }
+
+  include if exists <local/smtube>
+}

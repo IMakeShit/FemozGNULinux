@@ -1,0 +1,30 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/system-config-printer-applet /usr/share/system-config-printer/applet.py
+profile system-config-printer-applet @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/python>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} mrix,
+
+  @{sh_path}            rix,
+  @{bin}/python3.@{int} r,
+
+  /usr/share/system-config-printer/{,**} r,
+
+  owner @{PROC}/@{pid}/mounts r,
+
+  include if exists <local/system-config-printer-applet>
+}

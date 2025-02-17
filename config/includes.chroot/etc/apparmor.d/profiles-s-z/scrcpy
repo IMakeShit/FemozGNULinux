@@ -1,0 +1,43 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/scrcpy
+profile scrcpy @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/graphics>
+
+  network inet stream,
+  network inet6 stream,
+
+  signal (send) set=(kill) peer=adb,
+
+  @{exec_path} mr,
+
+  @{bin}/adb  rPx,
+
+  /usr/share/scrcpy/{,*} r,
+  /usr/share/icons/{,**} r,
+
+  /etc/machine-id r,
+
+  /var/lib/dbus/machine-id r,
+
+  owner @{user_config_dirs}/ibus/bus/ r,
+  owner @{user_config_dirs}/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+  owner @{user_config_dirs}/pulse/client.conf r,
+  owner @{user_config_dirs}/pulse/cookie r,
+  owner @{user_config_dirs}/pulse/cookie rk,
+
+  owner @{run}/user/@{uid}/pulse/ r,
+
+  /dev/shm/ r,
+
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/scrcpy>
+}

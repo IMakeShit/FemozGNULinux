@@ -1,0 +1,49 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/hugo
+profile hugo @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} mr,
+
+  @{bin}/git                          rix,
+  @{lib}/git{,-core}/git              rix,
+  @{lib}/git{,-core}/git-remote-http  rix,
+  @{lib}/go/bin/go                    rix,
+
+  /usr/share/git{,-core}/{,**} r,
+  /usr/share/mime/{,**} r,
+  /usr/share/terminfo/** r,
+
+  /etc/mime.types r,
+
+  owner @{user_projects_dirs}/{,**} rw,
+  owner @{user_projects_dirs}/**/.hugo_build.lock rwk,
+  owner @{user_projects_dirs}/**/go.{mod,sum} rwk,
+
+  owner @{user_cache_dirs}/hugo_cache/{,**} rwkl,
+
+  owner /tmp/hugo_cache/{,**} rwkl,
+  owner /tmp/go-codehost-@{int} rw,
+
+  @{sys}/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+
+  @{PROC}/sys/net/core/somaxconn r,
+
+  include if exists <local/hugo>
+}

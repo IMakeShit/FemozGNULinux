@@ -1,0 +1,40 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/update-cracklib
+profile update-cracklib @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  @{sh_path}                  rix,
+  @{bin}/cracklib-format      rix,
+  @{bin}/cracklib-packer      rPx,
+  @{bin}/env                  rix,
+  @{bin}/file                 rix,
+  @{bin}/find                 rix,
+  @{bin}/grep                 rix,
+  @{bin}/gzip                 rix,
+  @{bin}/install              rix,
+  @{bin}/install              rix,
+  @{bin}/sort                 rix,
+  @{bin}/tr                   rix,
+
+  / r,
+  /usr/share/dict/{,*} r,
+
+  /etc/magic r,
+  /etc/cracklib/cracklib.conf r,
+
+  owner /var/cache/cracklib/{,**} rw,
+
+  owner /tmp/sort@{rand6} rw,
+
+  include if exists <local/update-cracklib>
+}

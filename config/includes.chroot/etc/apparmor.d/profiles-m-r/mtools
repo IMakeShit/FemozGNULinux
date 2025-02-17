@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/{mtools,mattrib,mbadblocks,mcat,mcd,mclasserase,mcopy,mdel,mdeltree,mdir,mdu,mformat,minfo,mlabel,mmd,mmount,mmove,mpartition,mrd,mren,mshortname,mshowfat,mtoolstest,mtype,mzip}
+profile mtools @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/disks-write>
+  include <abstractions/user-download-strict>
+
+  capability setuid,
+  capability setgid,
+
+  @{exec_path} mr,
+
+  # Mtools config file locations
+  /etc/mtools.conf r,
+  /etc/default/mtools.conf r,
+  owner @{HOME}/.mtoolsrc r,
+
+  # A place for file images
+  owner @{user_img_dirs}/{,**} rwk,
+  /dev/shm/*/**.{iso,img,bin,mdf,nrg} rwk,
+  /dev/shm/*/**.{ISO,IMG,BIN,MDF,NRG} rwk,
+
+  include if exists <local/mtools>
+}

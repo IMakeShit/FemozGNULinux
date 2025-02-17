@@ -1,0 +1,28 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gpodder-migrate2tres
+profile gpodder-migrate2tres @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/python>
+
+  @{exec_path} r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/           r,
+  @{sh_path}        rix,
+  @{bin}/uname      rix,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  owner @{HOME}/gPodder/ rw,
+  owner @{HOME}/gPodder/** rwk,
+
+  include if exists <local/gpodder-migrate2tres>
+}

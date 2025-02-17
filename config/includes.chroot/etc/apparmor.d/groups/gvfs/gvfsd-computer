@@ -1,0 +1,19 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,gvfs/}gvfsd-computer
+profile gvfsd-computer @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  owner @{run}/user/@{uid}/gvfsd/socket-@{rand8} rw,
+
+  include if exists <local/gvfsd-computer>
+}

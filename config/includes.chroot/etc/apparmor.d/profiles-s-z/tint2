@@ -1,0 +1,64 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/tint2
+profile tint2 @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/freedesktop.org>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/app-launcher-user>
+
+  network netlink dgram,
+
+  @{exec_path} mr,
+
+  # Tint2 files
+  /usr/share/tint2/{,**} r,
+
+  # Tint2 config files
+  /etc/xdg/tint2/tint2rc r,
+  owner @{user_config_dirs}/tint2/{,*} rw,
+
+  # Tint2 cache files
+  owner @{user_cache_dirs}/ rw,
+  owner @{user_cache_dirs}/tint2/ rw,
+  owner @{user_cache_dirs}/tint2/@{hex}.png w,
+  owner @{user_cache_dirs}/tint2/icon.cache rwk,
+
+  # Launcher config files
+  owner @{user_config_dirs}/launchers/{,*.desktop} r,
+  owner @{user_config_dirs}/launchers/icons/{,*.png} r,
+
+  @{lib}/@{multiarch}/imlib2/loaders/*.so mr,
+
+  # Some missing icons
+  /usr/share/**.png r,
+
+  owner @{HOME}/.Xauthority r,
+
+  owner /tmp/tint2-@{pid}-@{int}.png rw,
+
+  # Battery applet
+  @{sys}/class/power_supply/ r,
+  @{sys}/devices/**/power_supply/**/* r,
+
+  @{sys}/fs/cgroup/{,**} r,
+
+  /dev/shm/#@{int} rw,
+
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/mountinfo r,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+  owner @{HOME}/.xsession-errors w,
+
+  include if exists <local/tint2>
+}

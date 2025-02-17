@@ -1,0 +1,19 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ipcalc
+profile ipcalc @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/perl>
+
+  @{exec_path} r,
+  @{bin}/perl r,
+
+  include if exists <local/ipcalc>
+}

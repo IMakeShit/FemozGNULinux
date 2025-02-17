@@ -1,0 +1,63 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+# Based on https://salsa.debian.org/debian/chrony/-/blob/debian/latest/debian/usr.sbin.chronyd
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/chronyd
+profile chronyd @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability net_admin,
+  capability net_bind_service,
+  capability net_raw,
+  capability setgid,
+  capability setuid,
+  capability sys_nice,
+  capability sys_resource,
+  capability sys_time,
+
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  /etc/adjtime r,
+  /etc/chrony.* r,
+  /etc/chrony.d/{,*} r,
+  /etc/chrony/{,**} r,
+
+  /var/lib/chrony/{,*} rw,
+  /var/log/chrony/{,*} rw,
+
+  # To sign replies to MS-SNTP clients by the smbd daemon
+  /var/lib/samba/ntp_signd/socket rw,
+
+  @{run}/chrony-dhcp/{,*} r,
+  @{run}/chrony.*.sock rw,
+  @{run}/chrony/{,*} rw,
+
+  # Allow reading the chronyd configuration file that timemaster(8) generates
+  @{run}/timemaster/chrony.conf r,
+
+  # Using the “tempcomp” directive gives chronyd the ability to improve
+  # the stability and accuracy of the clock by compensating the temperature
+  # changes measured by a sensor close to the oscillator.
+  @{sys}/class/hwmon/hwmon@{int}/temp@{int}_input r,
+  @{sys}/devices/virtual/thermal/thermal_zone@{int}/hwmon@{int}/temp@{int}_input r,
+
+  /dev/pps@{int} rw,
+  /dev/ptp@{int} rw,
+  /dev/rtc{,@{int}} rw,
+
+  include if exists <local/chronyd>
+}

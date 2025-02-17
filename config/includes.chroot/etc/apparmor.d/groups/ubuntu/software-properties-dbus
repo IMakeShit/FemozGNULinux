@@ -1,0 +1,51 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/software-properties/software-properties-dbus
+profile software-properties-dbus @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/bus-system>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+
+  # dbus: own bus=system name=com.ubuntu.SoftwareProperties
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+  dbus receive bus=system
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=software-properties-gtk),
+
+  @{exec_path} mr,
+
+  @{bin}/python3.@{int}  rix,
+  @{bin}/env             rix,
+  @{bin}/apt-key         rPx,  # Changing trusted keys
+  @{bin}/lsb_release     rPx -> lsb_release,
+
+  /etc/apt/apt.conf.d/10periodic w,
+  /etc/apt/sources.list{,.save} rw,
+
+  /usr/share/python-apt/{,**} r,
+  /usr/share/distro-info/*.csv r,
+  /usr/share/xml/iso-codes/{,**} r,
+
+  owner /tmp/???????? rw,  # unconventional '_' tail
+  owner /tmp/tmp????????/ w, # change to 'c'
+  owner /tmp/tmp????????/apt.conf w,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  include if exists <local/software-properties-dbus>
+}

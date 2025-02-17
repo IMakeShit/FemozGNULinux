@@ -1,0 +1,130 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/debian-security-support/check-support-status.hook
+profile check-support-status-hook @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/           r,
+  @{bin}/getent     rix,
+  @{bin}/mkdir      rix,
+  @{bin}/chown      rix,
+  @{bin}/stat       rix,
+  @{bin}/mktemp     rix,
+  @{bin}/rm         rix,
+
+  @{bin}/adduser             rPx,
+  @{bin}/check-support-status rPx,
+  @{bin}/debconf-escape       rCx -> debconf-escape,
+  @{bin}/runuser             rCx -> runuser,
+
+  # Think what to do about this (#FIXME#)
+  /usr/share/debconf/frontend      rPx,
+  #/usr/share/debconf/frontend     rCx -> frontend,
+
+  /usr/share/debconf/confmodule r,
+
+  # For shell pwd
+  / r,
+  /root/ r,
+
+        /tmp/ r,
+  owner /tmp/debian-security-support.postinst.*/ rw,
+  owner /tmp/debian-security-support.postinst.*/output rw,
+
+  /var/lib/ r,
+  /var/lib/debian-security-support/ r,
+
+
+  profile debconf-escape {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/perl>
+
+    @{bin}/debconf-escape r,
+    @{bin}/perl r,
+
+          /tmp/ r,
+    owner /tmp/debian-security-support.postinst.*/output r,
+
+  }
+
+  profile frontend {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/perl>
+    include <abstractions/nameservice-strict>
+
+    /usr/share/debconf/frontend r,
+    @{bin}/perl r,
+
+    /usr/share/debian-security-support/ r,
+    /usr/share/debian-security-support/check-support-status.hook rPx,
+
+    @{sh_path}        rix,
+    @{bin}/stty       rix,
+    @{bin}/locale     rix,
+
+    /etc/debconf.conf r,
+    owner /var/cache/debconf/{config,passwords,templates}.dat{,-new,-old} rwk,
+
+    # The following is needed when debconf uses GUI frontends.
+    include <abstractions/gtk>
+    include <abstractions/fonts>
+    include <abstractions/fontconfig-cache-read>
+    include <abstractions/freedesktop.org>
+    capability dac_read_search,
+    @{bin}/lsb_release rPx -> lsb_release,
+    @{bin}/hostname    rix,
+    owner @{PROC}/@{pid}/mounts r,
+    @{HOME}/.Xauthority r,
+
+  }
+
+  profile runuser {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/nameservice-strict>
+    include <abstractions/authentication>
+
+    network netlink raw,
+
+    # To remove the following errors:
+    #  runuser: cannot set user id: Operation not permitted
+    capability setuid,
+
+    # To remove the following errrors:
+    #  runuser: cannot set groups: Operation not permitted
+    capability setgid,
+
+    # To write records to the kernel auditing log.
+    capability audit_write,
+
+    @{bin}/runuser mr,
+
+    @{sh_path}        rix,
+
+    @{bin}/check-support-status rPx,
+
+    owner @{PROC}/@{pids}/loginuid r,
+          @{PROC}/1/limits r,
+
+    @{etc_ro}/security/limits.d/ r,
+
+          /tmp/ r,
+    owner /tmp/debian-security-support.postinst.*/output w,
+  }
+
+  include if exists <local/check-support-status-hook>
+}

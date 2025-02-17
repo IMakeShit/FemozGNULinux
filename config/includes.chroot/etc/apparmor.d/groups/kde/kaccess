@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/kaccess
+profile kaccess @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/graphics>
+  include <abstractions/kde-strict>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+
+  @{exec_path} mr,
+
+  @{bin}/gsettings rPx,
+
+  /usr/share/icons/{,**} r,
+
+  owner @{user_cache_dirs}/icon-cache.kcache rw,
+
+  owner @{user_config_dirs}/kaccessrc r,
+
+  owner @{user_share_dirs}/mime/generic-icons r,
+
+  /dev/tty r,
+
+  include if exists <local/kaccess>
+}

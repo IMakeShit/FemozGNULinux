@@ -1,0 +1,43 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/iwd/iwd
+profile iwd @{exec_path} {
+  include <abstractions/base>
+
+  capability net_admin,
+  capability net_raw,
+  capability net_bind_service,
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+  network netlink dgram,
+  network alg seqpacket,
+
+   @{exec_path} mr,
+
+  /etc/iwd/{,**} r,
+  /var/lib/iwd/{,**} rw,
+
+  @{sys}/devices/@{pci}/ieee80211/phy[0-9]/* r,
+  @{sys}/devices/@{pci}/modalias r,
+
+  @{PROC}/sys/net/ipv{4,6}/conf/wlan@{int}/arp_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlan@{int}/drop_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlan@{int}/ndisc_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlp*/arp_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlp*/drop_* rw,
+  @{PROC}/sys/net/ipv{4,6}/conf/wlp*/ndisc_* rw,
+
+  /dev/rfkill rw,
+
+  include if exists <local/iwd>
+}

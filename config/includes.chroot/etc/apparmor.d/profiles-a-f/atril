@@ -1,0 +1,89 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/atril{,-*}
+profile atril @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+  include <abstractions/ibus>
+  include <abstractions/nameservice-strict>
+  include <abstractions/user-download-strict>
+  include <abstractions/X-strict>
+
+  network netlink raw,
+
+  dbus send bus=session path=/org/mate/atril/{,**}
+       peer=(name=org.freedesktop.DBus, label=atrild),  # all interfaces and members
+
+  dbus send bus=session path=/org/mate/atril/Daemon
+       interface=org.mate.atril.Daemon
+       member={RegisterDocument,UnregisterDocument}
+       peer=(name=org.mate.atril.Daemon),  # no peer's labels
+
+  @{exec_path} mr,
+
+  @{sh_path}             rix,
+
+  @{bin}/atril-previewer rPx,
+
+  @{lib}/{,@{multiarch}/}webkit2gtk-*/WebKitNetworkProcess rix,
+  @{lib}/{,@{multiarch}/}webkit2gtk-*/WebKitWebProcess rix,
+
+  /usr/share/atril/{,**} r,
+  /usr/share/poppler/{,**} r,
+
+  /etc/fstab r,
+
+  owner @{HOME}/ r,
+  owner @{user_documents_dirs}/{,**} rw,
+  owner @{user_books_dirs}/{,**} rw,
+  owner @{user_torrents_dirs}/{,**} rw,
+  owner @{user_work_dirs}/{,**} rw,
+
+  owner @{user_config_dirs}/atril/{,*} rw,
+
+  owner @{user_cache_dirs}/atril/{,**} rw,
+
+  owner @{user_share_dirs}/ r,
+
+  owner /tmp/gtkprint_* rw,
+  owner /tmp/settings*.ini rw,
+  owner /tmp/settings*.ini.* rw,
+  owner /tmp/atril-@{pid}/{,**} rw,
+
+  @{sys}/firmware/acpi/pm_profile r,
+  @{sys}/devices/virtual/dmi/id/chassis_type r,
+  @{sys}/fs/cgroup/** r,
+
+             @{PROC}/zoneinfo r,
+       owner @{PROC}/@{pid}/cgroup r,
+       owner @{PROC}/@{pid}/fd/ r,
+       owner @{PROC}/@{pid}/mountinfo r,
+       owner @{PROC}/@{pid}/mounts r,
+       owner @{PROC}/@{pid}/statm r,
+  deny owner @{PROC}/@{pid}/cmdline r,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/atril>
+}
+
+profile @{bin}/atril-previewer {
+  include <abstractions/base>
+
+  include if exists <local/atril-previewer>
+}

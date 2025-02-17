@@ -1,0 +1,55 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,ibus/}ibus-x11
+profile ibus-x11 @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/dri-common>
+  include <abstractions/dri-enumerate>
+  include <abstractions/fonts>
+  include <abstractions/gtk>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/opencl>
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+
+  unix (connect, receive, send) type=stream peer=(label=ibus-daemon),
+
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  /var/lib/gdm{3,}/.config/ibus/bus/ r,
+  /var/lib/gdm{3,}/.config/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+  /var/lib/gdm{3,}/.cache/mesa_shader_cache/index rw,
+
+  owner @{user_cache_dirs}/ibus/dbus-@{rand8} rw,
+
+  owner @{user_config_dirs}/ibus/bus/ r,
+  owner @{user_config_dirs}/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+
+  owner @{run}/user/@{uid}/.mutter-Xwaylandauth.@{rand6} r,
+  owner @{run}/user/@{uid}/gdm/Xauthority r,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/ibus-x11>
+}

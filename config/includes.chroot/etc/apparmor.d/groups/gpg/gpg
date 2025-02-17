@@ -1,0 +1,66 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/gpg{,2}
+profile gpg @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/user-download-strict>
+  include <abstractions/user-read>
+
+  capability dac_read_search,
+
+  network netlink raw,
+
+  @{exec_path} mrix,
+
+  @{bin}/dirmngr           rPx,
+  @{bin}/gpg-agent         rPx,
+  @{bin}/gpg-connect-agent rPx,
+  @{bin}/gpgconf           rPx,
+  @{bin}/gpgsm             rPx,
+  @{lib}/{,gnupg/}scdaemon rPx,
+
+  /etc/inputrc r,
+
+  owner @{HOME}/@{XDG_GPG_DIR}/ rw,
+  owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+  owner @{HOME}/.var/app/**/gnupg*/** rw,
+  owner @{HOME}/.var/app/**/gnupg*/** rwkl -> @{HOME}/.var/app/**/gnupg*/**,
+
+  owner @{user_projects_dirs}/**/gnupg/ rw,
+  owner @{user_projects_dirs}/**/gnupg/** rwkl -> @{user_projects_dirs}/**/gnupg/**,
+
+  # only: apt
+  owner /etc/apt/keyrings/ rw,
+  owner /etc/apt/keyrings/** rwkl -> /etc/apt/keyrings/**,
+
+  owner /var/lib/*/gnupg/ rw,
+  owner /var/lib/*/gnupg/** rwkl -> /var/lib/*/gnupg/**,
+
+  owner /var/lib/*/.gnupg/ rw,
+  owner /var/lib/*/.gnupg/** rwkl -> /var/lib/*/.gnupg/**,
+
+  # TODO: Remove after zypper profile is created
+  owner /var/tmp/zypp.@{rand6}/ rw,
+  owner /var/tmp/zypp.@{rand6}/** rwkl -> /var/tmp/zypp.@{rand6}/**,
+
+  owner /tmp/ostree-gpg-*/ r,
+  owner /tmp/ostree-gpg-*/** rwkl -> /tmp/ostree-gpg-*/**,
+
+  owner /tmp/tmp.[a-zA-Z0-9]* rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+  owner @{PROC}/@{pid}/task/@{tid}/stat rw,
+
+  include if exists <local/gpg>
+}

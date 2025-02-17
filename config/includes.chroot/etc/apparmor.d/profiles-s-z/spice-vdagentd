@@ -1,0 +1,32 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/spice-vdagentd
+profile spice-vdagentd @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.login1.Session>
+
+  capability sys_nice,
+
+  @{exec_path} mr,
+
+  owner @{run}/spice-vdagentd/spice-vdagent-sock r,
+  owner @{run}/spice-vdagentd/spice-vdagentd.pid rw,
+        @{run}/systemd/journal/dev-log w,
+        @{run}/systemd/seats/seat@{int} r,
+        @{run}/systemd/sessions/* r,
+        @{run}/systemd/users/@{uid} r,
+
+  @{PROC}/@{pids}/cgroup r,
+
+  /dev/uinput rw,
+  /dev/vport@{int}p@{int} rw,
+
+  include if exists <local/spice-vdagentd>
+}

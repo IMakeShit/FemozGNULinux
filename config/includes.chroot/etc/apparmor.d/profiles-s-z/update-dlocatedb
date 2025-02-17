@@ -1,0 +1,64 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/update-dlocatedb
+profile update-dlocatedb @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+  @{sh_path}        rix,
+
+  @{bin}/cat        rix,
+  @{bin}/uname      rix,
+  @{bin}/sed        rix,
+  @{bin}/sort       rix,
+  @{bin}/uniq       rix,
+
+  @{bin}/ionice     rix,
+
+  /usr/share/dlocate/updatedb rCx -> updatedb,
+  @{bin}/dpkg            rPx -> child-dpkg,
+
+  owner @{PROC}/@{pid}/fd/2 w,
+
+  /var/lib/dlocate/dpkg-list w,
+
+  # For shell pwd
+  /root/ r,
+
+
+  profile updatedb {
+    include <abstractions/base>
+    include <abstractions/perl>
+
+    /usr/share/dlocate/updatedb r,
+    @{bin}/perl r,
+
+    /etc/default/dlocate r,
+
+    /var/lib/dlocate/ r,
+    /var/lib/dlocate/dlocatedb rw,
+    /var/lib/dlocate/dlocatedb.stamps{,.new} rw,
+    /var/lib/dlocate/dlocatedb.{new,old} rw,
+    link /var/lib/dlocate/dlocatedb.old -> /var/lib/dlocate/dlocatedb,
+
+    /var/lib/dpkg/diversions r,
+
+    /var/lib/dpkg/info/   r,
+    /var/lib/dpkg/info/*.list r,
+
+    # For compression
+    @{bin}/gzip rix,
+    /var/lib/dlocate/dlocatedb.gz rw,
+
+  }
+
+  include if exists <local/update-dlocatedb>
+}

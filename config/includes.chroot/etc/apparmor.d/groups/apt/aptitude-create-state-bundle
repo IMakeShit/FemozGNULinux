@@ -1,0 +1,34 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/aptitude-create-state-bundle
+profile aptitude-create-state-bundle @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+
+  @{exec_path} r,
+  @{sh_path}        rix,
+
+  @{bin}/which{,.debianutils}      rix,
+  @{bin}/tar        rix,
+  @{bin}/bzip2      rix,
+  @{bin}/gzip       rix,
+
+  # Files included in the bundle
+  owner @{HOME}/.aptitude/{,*} r,
+  /var/lib/aptitude/{,*} r,
+  /var/lib/apt/{,**} r,
+  /var/cache/apt/ r,
+  /var/cache/apt/*.bin r,
+  /etc/apt/{,**} r,
+  /var/lib/dpkg/status r,
+
+  include if exists <local/aptitude-create-state-bundle>
+}

@@ -1,0 +1,26 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/update-notifier/notify-reboot-required
+profile notify-reboot-required @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/gettext     rix,
+  @{bin}/snap       rPUx,
+
+  /usr/share/update-notifier/notify-reboot-required r,
+
+  @{run}/reboot-required rw,
+  @{run}/reboot-required.pkgs rw,
+
+  include if exists <local/notify-reboot-required>
+}

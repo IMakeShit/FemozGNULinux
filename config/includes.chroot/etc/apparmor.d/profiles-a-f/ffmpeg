@@ -1,0 +1,42 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2017-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/ffmpeg
+profile ffmpeg @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/consoles>
+  include <abstractions/dri-common>
+  include <abstractions/nameservice-strict>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-download-strict>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path}  mr,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  owner @{HOME}/.Xauthority r,
+
+  owner @{user_music_dirs}/** rw,
+  owner @{user_videos_dirs}/** rw,
+
+  owner /tmp/*.{png,jpg} rw,  # To generate thumbnails in some apps
+  owner /tmp/vidcutter/** rw, # TMP files for apps using ffmpeg
+
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node[0-9]/meminfo r,
+
+  include if exists <local/ffmpeg>
+}

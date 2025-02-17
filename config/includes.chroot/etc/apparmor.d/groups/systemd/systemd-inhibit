@@ -1,0 +1,24 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/systemd-inhibit
+profile systemd-inhibit @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability net_admin,
+  capability sys_resource,
+
+  @{exec_path} mr,
+
+  @{bin}/cat rix,
+
+  @{run}/systemd/inhibit/*.ref rw,
+
+  include if exists <local/systemd-inhibit>
+}

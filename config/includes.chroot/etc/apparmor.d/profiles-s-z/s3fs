@@ -1,0 +1,73 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/s3fs
+profile s3fs @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/ssl_certs>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink raw,
+
+  mount fstype=fuse.s3fs -> @{MOUNTS}/,
+  mount fstype=fuse.s3fs -> @{MOUNTS}/*/,
+
+  @{exec_path} mr,
+
+  @{bin}/fusermount{,3}  rCx -> fusermount,
+
+  /etc/mime.types r,
+  /etc/passwd-s3fs r,
+
+  owner @{HOME}/.passwd-s3fs r,
+
+  owner @{MOUNTS}/ r,
+  owner @{MOUNTS}/*/ r,
+  owner /tmp/* rw,
+
+  /dev/fuse rw,
+
+  profile fusermount {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    capability dac_read_search,
+    capability sys_admin,
+
+    network inet stream,
+    network inet6 stream,
+
+    mount fstype=fuse.s3fs -> @{MOUNTS}/,
+    mount fstype=fuse.s3fs -> @{MOUNTS}/*/,
+  
+    umount @{MOUNTS}/,
+    umount @{MOUNTS}/*/,
+  
+    @{bin}/fusermount{,3} mr,
+
+    /etc/fuse.conf r,
+
+    @{MOUNTS}/ r,
+    @{MOUNTS}/*/ r,
+
+    owner /tmp/s3fstmp.* rw,
+
+    @{PROC}/@{pids}/mounts r,
+
+    /dev/fuse rw,
+
+    include if exists <local/s3fs_fusermount>
+  }
+
+  include if exists <local/s3fs>
+}

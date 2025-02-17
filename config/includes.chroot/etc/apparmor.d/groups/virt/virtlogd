@@ -1,0 +1,47 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/virtlogd
+profile virtlogd @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  ptrace (read) peer=libvirtd,
+  ptrace (read) peer=unconfined,
+  ptrace (read) peer=virtqemud,
+
+  @{exec_path} mr,
+
+  /etc/libvirt/virtlogd.conf r,
+
+  /var/log/libvirt/qemu/*.log rw,
+
+  owner @{user_cache_dirs}/libvirt/qemu/log/{,**} rw,
+
+  owner @{run}/user/@{uid}/common/system.token rw,
+  owner @{run}/user/@{uid}/libvirt/virtlogd.pid rwk,
+  owner @{run}/user/@{uid}/libvirt/virtlogd* w,
+
+  @{run}/libvirt/common/system.token rwk,
+  @{run}/libvirt/virtlogd-sock rw,
+  @{run}/systemd/inhibit/[0-9]*.ref rw,
+  @{run}/virtlogd.pid rwk,
+
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node@{int}/meminfo r,
+
+        @{PROC}/1/environ r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/kernel/osrelease r,
+  owner @{PROC}/@{pid}/stat r,
+
+  /dev/dri/ r,
+
+  include if exists <local/virtlogd>
+}

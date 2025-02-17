@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{lib_dirs} = /opt/google/chrome{,-stable,-beta,-unstable}
+
+@{exec_path} = @{lib_dirs}/chrome-sandbox
+profile chrome-sandbox @{exec_path} {
+  include <abstractions/base>
+
+  capability setgid,
+  capability setuid,
+  capability sys_admin,
+  capability sys_chroot,
+  capability sys_resource,
+
+  @{exec_path} mr,
+
+  @{lib_dirs}/chrome      rPx,
+  @{lib_dirs}/nacl_helper rix,
+
+        @{PROC} r,
+        @{PROC}/@{pids}/ r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/oom_{,score_}adj rw,
+
+  include if exists <local/chrome-sandbox>
+}

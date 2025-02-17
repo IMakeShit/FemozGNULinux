@@ -1,0 +1,64 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/jmtpfs
+profile jmtpfs @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/devices-usb>
+
+  network netlink raw,
+
+  @{exec_path} mr,
+
+  @{bin}/fusermount{,3} rCx -> fusermount,
+
+  owner /tmp/tmp* rw,
+  owner /tmp/#@{int} rw,
+
+  # Mount points
+  owner @{HOME}/*/ r,
+  owner @{HOME}/*/*/ r,
+
+  owner @{user_cache_dirs}/*/mtp{,-@{int}}/ rw,
+
+  mount fstype={fuse,fuse.jmtpfs} -> @{HOME}/*/,
+  mount fstype={fuse,fuse.jmtpfs} -> @{HOME}/*/*/,
+  mount fstype={fuse,fuse.jmtpfs} -> @{user_cache_dirs}/*/*/,
+
+  /etc/magic r,
+
+  /dev/fuse rw,
+
+
+  profile fusermount {
+    include <abstractions/base>
+    include <abstractions/nameservice-strict>
+
+    # To mount anything:
+    capability sys_admin,
+
+    #
+    capability dac_read_search,
+
+    @{bin}/fusermount{,3} mr,
+
+    mount fstype={fuse,fuse.jmtpfs} -> @{HOME}/*/,
+    mount fstype={fuse,fuse.jmtpfs} -> @{HOME}/*/*/,
+    mount fstype={fuse,fuse.jmtpfs} -> @{user_cache_dirs}/*/*/,
+
+    /etc/fuse.conf r,
+
+    /dev/fuse rw,
+
+    @{PROC}/@{pid}/mounts r,
+
+  }
+
+  include if exists <local/jmtpfs>
+}

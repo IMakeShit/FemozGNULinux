@@ -1,0 +1,35 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,NetworkManager/}nm-openvpn-service
+profile nm-openvpn-service @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability kill,
+  capability net_admin,
+
+  signal (send) set=(term) peer=openvpn,
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/kmod        rPx,
+  @{bin}/openvpn     rPx,
+  @{lib}/{,NetworkManager/}nm-openvpn-auth-dialog rPx,
+  @{lib}/{,NetworkManager/}nm-openvpn-service-openvpn-helper rPx,
+
+  @{run}/NetworkManager/nm-openvpn-@{uuid} rw,
+
+  /dev/net/tun rw,
+  /dev/tty rw,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  include if exists <local/nm-openvpn-service>
+}

@@ -1,0 +1,86 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/vidcutter
+profile vidcutter @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/audio>
+  include <abstractions/dconf-write>
+  include <abstractions/dri-enumerate>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+  include <abstractions/mesa>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+  include <abstractions/qt5-compose-cache-write>
+  include <abstractions/qt5-settings-write>
+  include <abstractions/qt5-shader-cache>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-download-strict>
+  include <abstractions/X>
+
+  @{exec_path} r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/ r,
+  @{bin}/ldconfig  rix,
+
+  @{bin}/ffmpeg     rPx,
+  @{bin}/ffprobe    rPx,
+  @{bin}/mediainfo  rPx,
+
+  @{open_path}         rPx -> child-open,
+
+  /usr/share/hwdata/pnp.ids r,
+  /usr/share/qt5ct/** r,
+
+  /etc/fstab r,
+  /etc/vdpau_wrapper.cfg r,
+
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  owner @{HOME}/ r,
+  owner @{user_music_dirs}/{,**} rw,
+  owner @{user_pictures_dirs}/{,**} rw,
+  owner @{user_torrents_dirs}/{,**} rw,
+  owner @{user_videos_dirs}/{,**} rw,
+
+  owner @{user_config_dirs}/vidcutter/ rw,
+  owner @{user_config_dirs}/vidcutter/* rwkl -> @{user_config_dirs}/vidcutter/#@{int},
+
+  owner @{user_cache_dirs}/ rw,
+
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+
+  @{sys}/devices/system/node/ r,
+  @{sys}/devices/system/node/node@{int}/meminfo r,
+
+  owner /tmp/vidcutter-@{uuid} w,
+  owner /tmp/#@{int} rw,
+  owner /tmp/*.jpg rwl -> /tmp/#@{int},
+  owner /tmp/vidcutter/{,*} rw,
+
+  deny owner @{PROC}/@{pid}/cmdline r,
+       owner @{PROC}/@{pid}/fd/ r,
+       owner @{PROC}/@{pid}/mountinfo r,
+       owner @{PROC}/@{pid}/mounts r,
+  deny       @{PROC}/sys/kernel/random/boot_id r,
+
+  /dev/ r,
+  /dev/shm/#@{int} rw,
+  /dev/disk/*/ r,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/vidcutter>
+}

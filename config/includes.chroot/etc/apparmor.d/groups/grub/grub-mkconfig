@@ -1,0 +1,94 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022 Jeroen Rijken
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/grub-mkconfig
+profile grub-mkconfig @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability dac_override,
+  capability dac_read_search,
+
+  @{exec_path}                     mr,
+
+  /{usr/,}{local/,}{s,}bin/zfs     rPx,
+  /{usr/,}{local/,}{s,}bin/zpool   rPx,
+  @{bin}/dmsetup             rPUx,
+  @{bin}/grub-probe           rPx,
+  @{sh_path}                  rix,
+  @{bin}/{e,f,}grep           rix,
+  @{bin}/{m,g,}awk            rix,
+  @{bin}/basename             rix,
+  @{bin}/btrfs                rPx,
+  @{bin}/cat                  rix,
+  @{bin}/chmod                rix,
+  @{bin}/cut                  rix,
+  @{bin}/date                 rix,
+  @{bin}/dirname              rix,
+  @{bin}/dpkg                 rPx,
+  @{bin}/find                 rix,
+  @{bin}/findmnt              rPx,
+  @{bin}/gettext              rix,
+  @{bin}/grub-mkrelpath       rPx,
+  @{bin}/grub-script-check    rPx,
+  @{bin}/head                 rix,
+  @{bin}/id                   rPx,
+  @{bin}/ls                   rix,
+  @{bin}/lsb_release          rPx -> lsb_release,
+  @{bin}/mktemp               rix,
+  @{bin}/mount                rPx,
+  @{bin}/mountpoint           rix,
+  @{bin}/mv                   rix,
+  @{bin}/os-prober            rPx,
+  @{bin}/paste                rix,
+  @{bin}/readlink             rix,
+  @{bin}/rm                   rix,
+  @{bin}/rmdir                rix,
+  @{bin}/sed                  rix,
+  @{bin}/sort                 rix,
+  @{bin}/stat                 rix,
+  @{bin}/tail                 rix,
+  @{bin}/tr                   rix,
+  @{bin}/umount               rPx,
+  @{bin}/uname                rix,
+  @{bin}/which{.debianutils,} rix,
+  /etc/grub.d/{**,}           rix,
+
+  @{lib}/gconv/gconv-modules r,
+  @{lib}/gconv/gconv-modules.d/{,gconv-modules-extra.conf} r,
+  @{lib}/libostree/grub[0-9]-@{int}_ostree rix,
+
+  /boot/{**,} r,
+  /boot/grub/{**,} rw,
+
+  /etc/default/grub r,
+  /etc/default/grub-btrfs/config r,
+  /etc/default/grub.d/{*,} r,
+
+  /usr/share/grub/{**,} r,
+  /usr/share/terminfo/** r,
+
+  /.zfs/snapshot/*/boot/ r,
+  /.zfs/snapshot/*/etc/{machine-id,} r,
+  /.zfs/snapshot/*/etc/fstab r,
+  /.zfs/snapshot/*/{usr/,}lib/os-release r,
+
+  / r,
+
+  owner /tmp/** rw,
+
+  @{PROC}/@{pids}/mountinfo r,
+  @{PROC}/@{pids}/mounts r,
+
+  @{sys}/firmware/efi/efivars/OsIndicationsSupported-@{uuid} r,
+
+  /dev/tty@{int} rw,
+
+  include if exists <local/grub-mkconfig>
+}

@@ -1,0 +1,109 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/apt-key
+profile apt-key @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  @{sh_path}        rix,
+  @{bin}/{,e,f}grep rix,
+  @{bin}/{,m,g}awk  rix,
+  @{bin}/base64     rix,
+  @{bin}/cat        rix,
+  @{bin}/chmod      rix,
+  @{bin}/cmp        rix,
+  @{bin}/comm       rix,
+  @{bin}/cp         rix,
+  @{bin}/cut        rix,
+  @{bin}/find       rix,
+  @{bin}/id         rix,
+  @{bin}/mktemp     rix,
+  @{bin}/readlink   rix,
+  @{bin}/rm         rix,
+  @{bin}/mv         rix,
+  @{bin}/sed        rix,
+  @{bin}/sort       rix,
+  @{bin}/touch      rix,
+  @{bin}/tr         rix,
+  @{bin}/uniq       rix,
+  @{bin}/wc         rix,
+
+  @{bin}/gpgconf    rCx -> gpg,
+  @{bin}/gpg{,2}    rCx -> gpg,
+
+  # Do not strip env to avoid errors like the following:
+  #  ERROR: ld.so: object 'libfakeroot-sysv.so' from LD_PRELOAD cannot be preloaded (cannot open
+  #  shared object file): ignored.
+  @{bin}/dpkg-query rpx,
+  #
+  @{bin}/apt-config rPx,
+
+  # For shell pwd
+  / r,
+  /etc/ r,
+  /root/ r,
+
+  /etc/apt/trusted.gpg r,
+  /etc/apt/trusted.gpg.d/{,*.gpg,*.asc} r,
+
+        /tmp/ r,
+  owner /tmp/apt-key-gpghome.*/{,**} rw,
+
+
+  profile gpg {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/ssl_certs>
+    include <abstractions/nameservice-strict>
+
+    network inet dgram,
+    network inet6 dgram,
+    network inet stream,
+    network inet6 stream,
+
+    @{bin}/gpg{,2} mr,
+    @{bin}/gpgconf mr,
+
+    @{bin}/dirmngr           rix,
+    @{bin}/gpg-agent         rix,
+    @{bin}/gpg-connect-agent rix,
+
+    /usr/share/gnupg/sks-keyservers.netCA.pem r,
+  
+    /etc/hosts r,
+    /etc/inputrc r,
+
+    /etc/apt/.#lk0x[a-f0-9]*.@{pid} rw,
+    /etc/apt/.#lk0x[a-f0-9]*.@{pid}x rwl -> /etc/apt/.#lk0x[a-f0-9]*.@{pid},
+    /etc/apt/trusted.gpg{,~,.tmp} rw,
+    /etc/apt/trusted.gpg.lock rwl -> /etc/apt/.#lk0x[a-f0-9]*.@{pid},
+
+    /etc/apt/trusted.gpg.d/ r,
+    /etc/apt/trusted.gpg.d/.#lk0x[a-f0-9]*.@{pid} rw,
+    /etc/apt/trusted.gpg.d/.#lk0x[a-f0-9]*.@{pid}x rwl -> /etc/apt/trusted.gpg.d/.#lk0x[a-f0-9]*.@{pid},
+    /etc/apt/trusted.gpg.d/*.gpg r,
+    /etc/apt/trusted.gpg.d/*.gpg.lock rwl -> /etc/apt/trusted.gpg.d/.#lk0x[a-f0-9]*.@{pid},
+
+    owner /tmp/apt-key-gpghome.*/ rw,
+    owner /tmp/apt-key-gpghome.*/** rwkl -> /tmp/apt-key-gpghome.*/**,
+    owner /tmp/apt-key-gpghome.*/gpgoutput.{log,err} w,
+  
+    owner @{run}/user/@{uid}/gnupg/d.*/ rw,
+
+    owner @{PROC}/@{pid}/fd/ r,
+    owner @{PROC}/@{pid}/task/@{tid}/comm rw,
+
+    include if exists <local/apt-key_pgp>
+  }
+
+  include if exists <local/apt-key>
+}

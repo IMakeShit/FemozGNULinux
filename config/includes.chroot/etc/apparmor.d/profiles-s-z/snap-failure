@@ -1,0 +1,27 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{lib_dirs} = @{lib}/ /snap/{snapd,core}/@{int}@{lib}
+
+@{exec_path} = @{lib_dirs}/snapd/snap-failure
+profile snap-failure @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  @{bin}/systemctl         rPx -> child-systemctl,
+  @{lib_dirs}/snapd/snapd  rPx,
+
+  /var/lib/snapd/sequence/snapd.json r,
+
+  @{sys}/kernel/mm/transparent_hugepage/hpage_pmd_size r,
+
+  @{PROC}/cmdline r,
+
+  include if exists <local/snap-failure>
+}

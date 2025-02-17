@@ -1,0 +1,104 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/keepassxc
+profile keepassxc @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/dconf-write>
+  include <abstractions/desktop>
+  include <abstractions/devices-usb>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/graphics>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/qt5-compose-cache-write>
+  include <abstractions/qt5-settings-write>
+  include <abstractions/ssl_certs>
+  include <abstractions/user-download-strict>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+  network netlink dgram,
+  network netlink raw,
+
+  @{exec_path} mrix,
+
+  # Allowed apps to open
+  @{bin}/geany           rPUx,
+  @{lib}/firefox/firefox rPx,
+  @{open_path}           rPx -> child-open,
+
+  /usr/share/hwdata/pnp.ids r,
+  /usr/share/keepassxc/{,**} r,
+  /usr/share/qt*/{,**} r,
+
+  /etc/fstab r,
+  /etc/machine-id r,
+  /var/lib/dbus/machine-id r,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/.mozilla/native-messaging-hosts/org.keepassxc.keepassxc_browser.json rw,
+  owner @{HOME}/@{XDG_SSH_DIR}/ r,
+  owner @{HOME}/@{XDG_SSH_DIR}/* r,
+
+  owner @{user_password_store_dirs}/ r,
+  owner @{user_password_store_dirs}/*.csv rw,
+  owner @{user_password_store_dirs}/*.kdbx* rwl -> @{KP_DB}/#@{int},
+  owner @{user_password_store_dirs}/#@{int} rw,
+
+  owner @{user_config_dirs}/BraveSoftware/Brave-Browser{,-Beta,-Dev}/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json rw,
+  owner @{user_config_dirs}/chromium/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json rw,
+  owner @{user_config_dirs}/google-chrome{,-beta,-unstable}/NativeMessagingHosts/org.keepassxc.keepassxc_browser.json rw,
+  owner @{user_config_dirs}/qt5ct/{,**} r,
+  owner @{user_config_dirs}/{,kdedefaults/}kdeglobals r,
+
+  # Database locations
+  owner @{user_cache_dirs}/keepassxc/ rw,
+  owner @{user_cache_dirs}/keepassxc/* rwkl -> @{user_cache_dirs}/keepassxc/#@{int},
+  owner @{user_config_dirs}/keepassxc/ rw,
+  owner @{user_config_dirs}/keepassxc/* rwkl -> @{user_config_dirs}/keepassxc/#@{int},
+
+  owner /tmp/.[a-zA-Z]*/{,s} rw,
+  owner /tmp/*.*.gpgkey rwl -> /tmp/#@{int},
+  owner /tmp/*.*.settings rwl -> /tmp/#@{int},
+  owner /tmp/#@{int} rw,
+  owner /tmp/keepassxc-*.lock{,.rmlock} rwk,
+  owner /tmp/keepassxc-*.socket rw,
+  owner /tmp/keepassxc.lock rw,
+  owner /tmp/keepassxc.socket rw,
+
+  owner @{run}/user/@{uid}/.[a-zA-Z]*/{,s} rw,
+  owner @{run}/user/@{uid}/kpxc_server rw,
+
+             @{PROC}/@{pids}/comm r,
+             @{PROC}/modules r,
+       owner @{PROC}/@{pid}/mountinfo r,
+       owner @{PROC}/@{pid}/mounts r,
+  deny       @{PROC}/sys/kernel/random/boot_id r,
+  deny owner @{PROC}/@{pid}/cmdline r,
+
+  owner @{run}/user/@{pid}/app/ w,
+  owner @{run}/user/@{pid}/app/org.keepassxc.KeePassXC/{,**} rw,
+  owner @{run}/user/@{uid}/org.keepassxc.KeePassXC.BrowserServer w,
+  owner @{run}/user/@{uid}/org.keepassxc.KeePassXC/ w,
+
+        /dev/shm/#@{int} rw,
+        /dev/tty rw,
+        /dev/urandom rw,
+  owner /dev/tty@{int} rw,
+
+  # Silencer
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/keepassxc>
+}

@@ -1,0 +1,72 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{REPO_DIR}  = @{MOUNTS}/debuilder/repo
+
+@{exec_path} = @{bin}/reprepro
+profile reprepro @{exec_path} {
+  include <abstractions/base>
+
+  @{exec_path} mr,
+
+  @{bin}/gpgconf rCx -> gpg,
+  @{bin}/gpg{,2} rCx -> gpg,
+  @{bin}/gpgsm   rCx -> gpg,
+
+  owner @{PROC}/@{pid}/fd/ r,
+
+  # The repository dir
+  owner @{REPO_DIR}/debian/ r,
+  owner @{REPO_DIR}/debian/conf/{distributions,options} r,
+
+  owner @{REPO_DIR}/debian/db/lockfile rw,
+  owner @{REPO_DIR}/debian/db/version{,.new} rw,
+  owner @{REPO_DIR}/debian/db/packages.db rw,
+  owner @{REPO_DIR}/debian/db/references.db rw,
+  owner @{REPO_DIR}/debian/db/release.caches.db rw,
+  owner @{REPO_DIR}/debian/db/contents.cache.db rw,
+  owner @{REPO_DIR}/debian/db/checksums.db rw,
+
+  owner @{REPO_DIR}/debian/dists/*/*/binary-*/Packages{,.gz} w,
+  owner @{REPO_DIR}/debian/dists/*/*/binary-*/Packages{,.gz}.new rw,
+  owner @{REPO_DIR}/debian/dists/*/*/source/Sources{,.gz} w,
+  owner @{REPO_DIR}/debian/dists/*/*/source/Sources{,.gz}.new rw,
+  owner @{REPO_DIR}/debian/dists/*/{In,}Release{,.new} rw,
+  owner @{REPO_DIR}/debian/dists/*/Release.gpg{,.new} rw,
+
+  owner @{REPO_DIR}/debian/**/ w,
+  owner @{REPO_DIR}/debian/pool/*/*/*/*.tar.* rw,
+  owner @{REPO_DIR}/debian/pool/*/*/*/*.dsc rw,
+  owner @{REPO_DIR}/debian/pool/*/*/*/*.deb rw,
+  owner @{REPO_DIR}/debian/pool/*/*/*/*.git rw,
+
+  # Dirs containing .deb files
+  owner @{REPO_DIR}/*.deb r,
+  /var/cache/apt/archives/*.deb r,
+
+  # For package building
+  owner @{user_build_dirs}/pbuilder/result/*.{dsc,changes} r,
+  owner @{user_build_dirs}/pbuilder/result/*.deb r,
+  owner @{user_build_dirs}/pbuilder/result/*.tar.* r,
+
+
+  profile gpg {
+    include <abstractions/base>
+
+    @{bin}/gpgconf mr,
+    @{bin}/gpg{,2} mr,
+    @{bin}/gpgsm mr,
+
+    owner @{HOME}/@{XDG_GPG_DIR}/ rw,
+    owner @{HOME}/@{XDG_GPG_DIR}/** rwkl -> @{HOME}/@{XDG_GPG_DIR}/**,
+
+  }
+
+  include if exists <local/reprepro>
+}

@@ -1,0 +1,100 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/software-properties-gtk
+profile software-properties-gtk @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/apt-common>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.portal.Desktop>
+  include <abstractions/dconf-write>
+  include <abstractions/gnome-strict>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+
+  dbus bind bus=session name=com.ubuntu.SoftwareProperties,
+  dbus (send, receive) bus=system path=/com/ubuntu/SoftwareProperties
+       interface={com.ubuntu.SoftwareProperties,org.gtk.{Application,Actions}}
+       peer=(name="{:*,com.ubuntu.SoftwareProperties}", label=software-properties-gtk),
+  dbus send bus=system path=/
+       interface=com.ubuntu.SoftwareProperties
+       peer=(name=:*, label=software-properties-dbus),
+
+  dbus send bus=system path=/
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*),
+
+  dbus send bus=system path=/
+       interface=org.freedesktop.DBus.ObjectManager
+       member=GetManagedObjects
+       peer=(name=:*, label=ubuntu-advantage-desktop-daemon),
+
+  dbus send bus=system path=/com/canonical/UbuntuAdvantage/Manager
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=ubuntu-advantage-desktop-daemon),
+
+  @{exec_path} mr,
+
+  @{bin}/ r,
+
+  @{bin}/python3.@{int}           r,
+  @{bin}/{,da,ba}sh               rix,
+  @{bin}/aplay                    rPx,
+  @{bin}/apt-key                  rPx,
+  @{bin}/dpkg                     rPx -> child-dpkg,
+  @{bin}/ischroot                 rix,
+  @{bin}/lsb_release              rPx -> lsb_release,
+  @{bin}/ubuntu-advantage         rPx,
+
+  /usr/share/distro-info/*.csv r,
+  /usr/share/pixmaps/ r,
+  /usr/share/python-apt/{,**} r,
+  /usr/share/software-properties/{,**} r,
+  /usr/share/themes/{,**} r,
+  /usr/share/ubuntu-drivers-common/detect/{,**} r,
+  /usr/share/X11/xkb/{,**} r,
+  /usr/share/xml/iso-codes/{,**} r,
+  /usr/share/software-properties/gtkbuilder/* r,
+
+  /etc/apport/blacklist.d/{,*} r,
+  /etc/default/apport r,
+  /etc/update-manager/release-upgrades r,
+
+  /var/crash/*software-properties-gtk.@{uid}.crash rw,
+  /var/lib/snapd/desktop/icons/ r,
+  /var/lib/ubuntu-advantage/status.json r,
+
+  owner /tmp/???????? rw,
+  owner /tmp/tmp????????/ rw, # change to 'c'
+  owner /tmp/tmp????????/apt.conf rw,
+
+  owner @{run}/user/@{uid}/gnome-shell-disable-extensions w,
+
+  @{sys}/devices/ r,
+  @{sys}/devices/**/ r,
+  @{sys}/devices/**/modalias r,
+
+        @{PROC}/@{pids}/mountinfo r,
+        @{PROC}/asound/cards r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/environ r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  # Silencer
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/software-properties-gtk>
+}

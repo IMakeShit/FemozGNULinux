@@ -1,0 +1,90 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/gnome-shell/extensions/ding@rastersoft.com/{,app/}ding.js
+profile gnome-extension-ding @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/bus-accessibility>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/bus/net.hadess.SwitcherooControl>
+  include <abstractions/bus/org.a11y>
+  include <abstractions/bus/org.freedesktop.FileManager1>
+  include <abstractions/bus/org.freedesktop.Notifications>
+  include <abstractions/bus/org.gnome.ArchiveManager1>
+  include <abstractions/bus/org.gnome.Nautilus.FileOperations2>
+  include <abstractions/bus/org.gtk.Private.RemoteVolumeMonitor>
+  include <abstractions/bus/org.gtk.vfs.Daemon>
+  include <abstractions/bus/org.gtk.vfs.Metadata>
+  include <abstractions/bus/org.gtk.vfs.MountTracker>
+  include <abstractions/dconf-write>
+  include <abstractions/fonts>
+  include <abstractions/freedesktop.org>
+  include <abstractions/gtk>
+  include <abstractions/nameservice-strict>
+
+  unix (send,receive) type=stream addr=none peer=(label=gnome-shell),
+
+  # dbus: own bus=session name=com.rastersoft.ding interface={org.freedesktop.DBus.Properties,org.gtk.Actions}
+  # dbus: talk bus=session name=com.rastersoft.dingextension label=gnome-shell
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect 
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus send bus=session path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus*
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+  dbus send bus=system path=/org/freedesktop/DBus
+       interface=org.freedesktop.DBus*
+       peer=(name=org.freedesktop.DBus, label=dbus-daemon),
+
+  dbus send bus=session path=/org/gtk/vfs/metadata
+       interface=org.gtk.vfs.Metadata
+       member=Set
+       peer=(name=:*, label=gvfsd-metadata),
+
+  @{exec_path} mr,
+
+  @{sh_path}                   rix,
+  @{bin}/env                   rix,
+  @{bin}/gjs-console           rix,
+  @{bin}/gnome-control-center  rPx,
+  @{bin}/nautilus              rPx,
+
+  /usr/share/gnome-shell/extensions/ding@rastersoft.com/{,app/}* r,
+  /usr/share/thumbnailers/{,*.thumbnailer} r,
+  /usr/share/X11/{,**} r,
+
+  /etc/pulse/client.conf r,
+  /etc/pulse/client.conf.d/{,*} r,
+
+  /var/lib/snapd/desktop/icons/{,**} r,
+
+  owner @{HOME}/@{XDG_TEMPLATES_DIR}/ r,
+  owner @{HOME}/@{XDG_DESKTOP_DIR}/ r,
+
+  owner @{user_share_dirs}/nautilus/scripts/ r,
+
+  owner @{user_config_dirs}/pulse/cookie rk,
+
+  /dev/shm/ r,
+
+  owner @{run}/user/@{uid}/pulse/ r,
+  owner @{run}/user/@{uid}/pulse/native rw,
+
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+  owner @{PROC}/@{pid}/stat r,
+  owner @{PROC}/@{pid}/task/@{tid}/stat r,
+
+  deny owner @{user_share_dirs}/gvfs-metadata/{,*} r,
+
+  include if exists <local/gnome-extension-ding>
+}

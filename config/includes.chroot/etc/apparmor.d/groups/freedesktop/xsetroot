@@ -1,0 +1,39 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xsetroot
+profile xsetroot @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/X-strict>
+
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  /usr/share/icons/{,**} r,
+
+  /etc/X11/cursors/*.theme r,
+
+  owner @{HOME}/.icons/** r,
+  owner @{HOME}/.Xauthority r,
+  owner @{HOME}/.xsession-errors w,
+
+  owner @{user_share_dirs}/sddm/xorg-session.log w,
+  owner @{user_share_dirs}/sddm/wayland-session.log w,
+
+  owner /tmp/xauth_@{rand6} r,
+
+  @{run}/sddm/\{@{uuid}\} r,
+  @{run}/user/@{uid}/xauth_@{rand6} rl,
+  @{run}/sddm/xauth_@{rand6} r,
+
+  /dev/tty@{int} rw,
+
+  include if exists <local/xsetroot>
+}

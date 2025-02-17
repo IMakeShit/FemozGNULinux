@@ -1,0 +1,29 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/systemd-hwdb
+profile systemd-hwdb @{exec_path} flags=(attach_disconnected,mediate_deleted) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  capability dac_override,
+
+  @{exec_path} mr,
+
+  @{lib}/udev/#@{int} rwl,
+  @{lib}/udev/.#hwdb.bin@{hex} wl -> @{lib}/udev/#@{int},
+  @{lib}/udev/hwdb.bin w,
+
+  /etc/udev/.#hwdb.bind* rw,
+  /etc/udev/hwdb.bin rw,
+  /etc/udev/hwdb.d/{,*} r,
+
+  owner @{PROC}/@{pid}/stat r,
+
+  include if exists <local/systemd-hwdb>
+}

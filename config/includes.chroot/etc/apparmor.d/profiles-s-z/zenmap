@@ -1,0 +1,44 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/{zenmap,nmapfe}
+profile zenmap @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/gtk>
+  include <abstractions/freedesktop.org>
+  include <abstractions/fonts>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/python>
+  include <abstractions/user-download-strict>
+
+  signal (send) set=(term, kill) peer=nmap,
+
+  @{exec_path} r,
+  @{bin}/python3.@{int} r,
+
+  @{bin}/nmap rPx,
+
+  owner @{HOME}/ r,
+  owner @{HOME}/.zenmap/ rw,
+  owner @{HOME}/.zenmap/** rwk,
+  # For nmap xml files
+  owner @{HOME}/*.xml rw,
+
+  owner @{PROC}/@{pid}/mountinfo r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /etc/fstab r,
+
+  /usr/share/zenmap/** r,
+
+  owner /tmp/* rw,
+  owner /tmp/zenmap-stdout-* rw,
+
+  include if exists <local/zenmap>
+}

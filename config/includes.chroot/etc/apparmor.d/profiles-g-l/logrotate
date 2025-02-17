@@ -1,0 +1,121 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/logrotate
+profile logrotate @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability fsetid,
+  capability net_admin,
+  capability setgid,
+  capability setuid,
+
+  signal (send) set=(hup),
+  signal (send) set=(term cont) peer=systemd-tty-ask-password-agent,
+
+  @{exec_path} mr,
+
+  @{bin}/ r,
+
+  @{sh_path}                    rix,
+  @{bin}/cat                    rix,
+  @{bin}/grep                   rix,
+  @{bin}/gzip                   rix,
+  @{bin}/invoke-rc.d            rix,
+  @{bin}/kill                   rix,
+  @{bin}/ls                     rix,
+  @{bin}/setfacl                rix,
+  @{bin}/shred                  rix,
+  @{bin}/xz                     rix,
+  @{bin}/zstd                   rix,
+  @{lib}/rsyslog/rsyslog-rotate rix,
+
+  @{bin}/fail2ban-client                   rPx,
+  @{bin}/my_print_defaults                 rPUx,
+  @{bin}/mysqladmin                        rPUx,
+  @{bin}/systemd-tty-ask-password-agent    rPx,
+  @{lib}/php/php[7-8].[3-4]-fpm-reopenlogs rPUx,
+  /etc/init.d/nginx                        rPUx,
+  @{bin}/squid                             rPUx,
+
+  @{bin}/pgrep rCx -> pgrep,
+
+  # no new privs
+  #@{bin}/systemctl              rCx -> systemctl,
+  @{bin}/systemctl rix,
+  @{bin}/runlevel rix,
+  include <abstractions/wutmp>
+  ptrace (read),
+  capability sys_ptrace,
+  owner @{PROC}/@{pid}/stat r,
+        @{PROC}/1/environ r,
+        @{PROC}/1/sched r,
+        @{PROC}/cmdline r,
+        @{PROC}/sys/kernel/osrelease r,
+
+  /etc/ r,
+  @{etc_ro}/logrotate.conf rk,
+  @{etc_ro}/logrotate.d/ r,
+  @{etc_ro}/logrotate.d/* rk,
+
+  / r,
+  /var/log{,.hdd}/   r,
+  /var/log{,.hdd}/** rw,
+
+  /var/lib/{,misc/}logrotate/status rwk,
+  /var/lib/{,misc/}logrotate/status.tmp rw,
+  /var/lib/{,misc/}logrotate.status rwk,
+  /var/lib/{,misc/}logrotate.status.tmp rw,
+
+  @{run}/systemd/private rw,
+
+  @{sys}/firmware/efi/efivars/SecureBoot-@{uuid} r,
+
+  owner /dev/tty rw,
+
+  profile systemctl flags=(attach_disconnected) {
+    include <abstractions/base>
+    include <abstractions/wutmp>
+
+    capability sys_ptrace,
+    ptrace (read),
+
+    @{bin}/systemctl mr,
+
+    owner @{PROC}/@{pid}/stat r,
+          @{PROC}/1/environ r,
+          @{PROC}/1/sched r,
+          @{PROC}/cmdline r,
+          @{PROC}/sys/kernel/osrelease r,
+
+    /dev/kmsg rw,
+
+    include if exists <local/logrotate_systemctl>
+  }
+
+  profile pgrep {
+    include <abstractions/base>
+
+    @{bin}/pgrep mr,
+
+    # The /proc/ dir and the cmdline file have to be radable to avoid pgrep segfault.
+         @{PROC}/ r,
+         @{PROC}/@{pids}/cmdline r,
+         @{PROC}/sys/kernel/osrelease r,
+
+    include if exists <local/logrotate_pgrep>
+  }
+
+  include if exists <local/logrotate>
+}

@@ -1,0 +1,45 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/anacron
+profile anacron @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(usr1) peer=@{systemd},
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+  @{bin}/run-parts   rCx -> run-parts,
+
+  / r,
+  /etc/anacrontab r,
+
+  /var/spool/anacron/cron.* rwk,
+
+  @{HOME}/ r,
+
+  /tmp/file* rw,
+
+  profile run-parts {
+    include <abstractions/base>
+
+    @{bin}/run-parts mr,
+
+    /etc/cron.*/     r,
+    /etc/cron.*/* rPUx,
+
+    owner /tmp/#@{int} rw,
+    owner /tmp/file@{rand6} rw,
+
+   include if exists <local/anacron_run_parts>
+  }
+
+  include if exists <local/anacron>
+}

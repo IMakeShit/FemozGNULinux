@@ -1,0 +1,57 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xdg-user-dirs-update
+profile xdg-user-dirs-update @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/xdg-desktop>
+
+  @{exec_path} mr,
+
+  /etc/xdg/user-dirs.conf r,
+  /etc/xdg/user-dirs.defaults r,
+
+  /var/lib/gdm{3,}/.config/ rw,
+  /var/lib/gdm{3,}/.config/user-dirs.dirs{,*} rw,
+  /var/lib/gdm{3,}/.config/user-dirs.locale rw,
+  /var/lib/gdm{3,}/@{XDG_DESKTOP_DIR}/ rw,
+  /var/lib/gdm{3,}/@{XDG_DOCUMENTS_DIR}/ rw,
+  /var/lib/gdm{3,}/@{XDG_DOWNLOAD_DIR}/ rw,
+  /var/lib/gdm{3,}/@{XDG_MUSIC_DIR}/ rw,
+  /var/lib/gdm{3,}/@{XDG_PICTURES_DIR}/ rw,
+  /var/lib/gdm{3,}/@{XDG_PUBLICSHARE_DIR}/ rw,
+  /var/lib/gdm{3,}/@{XDG_TEMPLATES_DIR}/ rw,
+  /var/lib/gdm{3,}/@{XDG_VIDEOS_DIR}/ rw,
+
+  /var/lib/sddm/.config/ rw,
+  /var/lib/sddm/.config/user-dirs.dirs{,*} rw,
+  /var/lib/sddm/.config/user-dirs.locale rw,
+  /var/lib/sddm/@{XDG_DESKTOP_DIR}/ rw,
+  /var/lib/sddm/@{XDG_DOCUMENTS_DIR}/ rw,
+  /var/lib/sddm/@{XDG_DOWNLOAD_DIR}/ rw,
+  /var/lib/sddm/@{XDG_MUSIC_DIR}/ rw,
+  /var/lib/sddm/@{XDG_PICTURES_DIR}/ rw,
+  /var/lib/sddm/@{XDG_PUBLICSHARE_DIR}/ rw,
+  /var/lib/sddm/@{XDG_TEMPLATES_DIR}/ rw,
+  /var/lib/sddm/@{XDG_VIDEOS_DIR}/ rw,
+
+  owner @{HOME}/@{XDG_DESKTOP_DIR}/ w,
+  owner @{HOME}/@{XDG_DOCUMENTS_DIR}/ w,
+  owner @{HOME}/@{XDG_DOWNLOAD_DIR}/ w,
+  owner @{HOME}/@{XDG_MUSIC_DIR}/ w,
+  owner @{HOME}/@{XDG_PICTURES_DIR}/ w,
+  owner @{HOME}/@{XDG_PUBLICSHARE_DIR}/ w,
+  owner @{HOME}/@{XDG_TEMPLATES_DIR}/ w,
+  owner @{HOME}/@{XDG_VIDEOS_DIR}/ w,
+
+  owner @{user_config_dirs}/user-dirs.dirs rw,
+  owner @{user_config_dirs}/user-dirs.dirs@{rand6} rw,
+  owner @{user_config_dirs}/user-dirs.locale rw,
+
+  include if exists <local/xdg-user-dirs-update>
+}

@@ -1,0 +1,142 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# Copyright (C) 2022 Jeroen Rijken
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dkms
+profile dkms @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+
+  capability dac_read_search,
+  capability mknod,
+  capability setgid,
+  capability setuid,
+
+  deny unix (receive) type=stream,
+
+  @{exec_path} rm,
+
+  @{sh_path}        rix,
+  @{bin}/{,e,f}grep rix,
+  @{bin}/{,g,m}awk  rix,
+  @{bin}/as         rix,
+  @{bin}/cat        rix,
+  @{bin}/cp         rix,
+  @{bin}/cut        rix,
+  @{bin}/date       rix,
+  @{bin}/diff       rix,
+  @{bin}/echo       rix,
+  @{bin}/find       rix,
+  @{bin}/gcc        rix,
+  @{bin}/getconf    rix,
+  @{bin}/head       rix,
+  @{bin}/id         rPx,
+  @{bin}/kmod       rCx -> kmod,
+  @{bin}/ld         rix,
+  @{bin}/ln         rix,
+  @{bin}/ls         rix,
+  @{bin}/lsb_release rPx -> lsb_release,
+  @{bin}/make       rix,
+  @{bin}/mkdir      rix,
+  @{bin}/mktemp     rix,
+  @{bin}/mv         rix,
+  @{bin}/nproc      rix,
+  @{bin}/objcopy    rix,
+  @{bin}/pahole     rix,
+  @{bin}/pwd        rix,
+  @{bin}/readelf    rix,
+  @{bin}/readlink   rix,
+  @{bin}/rm         rix,
+  @{bin}/rmdir      rix,
+  @{bin}/sed        rix,
+  @{bin}/sleep      rix,
+  @{bin}/sort       rix,
+  @{bin}/strip      rix,
+  @{bin}/uname      rix,
+  @{bin}/uniq       rix,
+  @{bin}/update-secureboot-policy rPUx,
+  @{bin}/wc         rix,
+  @{bin}/xargs      rix,
+  @{bin}/zstd       rix,
+
+  @{lib}/gcc/@{multiarch}/@{int}*/*            rix,
+  @{lib}/linux-kbuild-*/scripts/**             rix,
+  @{lib}/linux-kbuild-*/tools/objtool/objtool  rix,
+  @{lib}/llvm-[0-9]*/bin/clang                 rix,
+  @{lib}/modules/*/build/scripts/**            rix,
+  @{lib}/modules/*/build/tools/**              rix,
+
+  /var/lib/dkms/**/build/* rix,
+  /var/lib/dkms/**/configure rix,
+  /var/lib/dkms/**/dkms.postbuild rix,
+
+  /var/lib/shim-signed/mok/** r,
+
+  / r,
+  @{lib}/modules/*/updates/ rw,
+  @{lib}/modules/*/updates/dkms/{,*,*/,**.ko.xz,**.ko.zst} rw,
+  @{lib}/modules/*/kernel/drivers/{,*,*/,**.ko.xz,**.ko.zst} rw,
+
+  /var/lib/dkms/ r,
+  /var/lib/dkms/** rw,
+
+  /etc/lsb-release r,
+  /etc/dkms/{,**} r,
+
+  # For building module in /usr/src/ subdirs
+  /usr/include/**.h r,
+  /usr/src/ r,
+  /usr/src/** rw,
+  /usr/src/linux-headers-*/scripts/**              rix,
+  /usr/src/linux-headers-*/scripts/gcc-plugins/*.so mr,
+  /usr/src/linux-headers-*/tools/**                rix,
+
+  # For autosign modules
+  owner /etc/kernel_key/*.crt r,
+  owner /etc/kernel_key/*.key r,
+  owner /etc/kernel_key/sign-kernel.sh rix,
+
+  owner @{HOME}/ r,
+
+  owner /tmp/* rw,
+  owner /tmp/cc* rw,
+  owner /tmp/dkms.*/ rw,
+  owner /tmp/sh-thd.* rw,
+  owner /tmp/tmp.* rw,
+
+        @{PROC}/sys/kernel/osrelease r,
+  owner @{PROC}/@{pid}/fd/ r,
+
+  profile kmod {
+    include <abstractions/base>
+    include <abstractions/consoles>
+    include <abstractions/openssl>
+
+    @{bin}/kmod mr,
+
+    @{PROC}/cmdline r,
+
+    /etc/depmod.d/{,*} r,
+
+    @{lib}/modules/*/modules.* rw,
+    /var/lib/dkms/**/module/*.ko* r,
+
+    owner /boot/System.map-* r,
+
+    owner /tmp/tmp.* r,
+
+    @{sys}/module/compression r,
+
+    include if exists <local/dkms_kmod>
+  }
+
+  include if exists <local/dkms>
+}

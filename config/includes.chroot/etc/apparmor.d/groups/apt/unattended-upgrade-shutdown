@@ -1,0 +1,33 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = /usr/share/unattended-upgrades/unattended-upgrade-shutdown
+profile unattended-upgrade-shutdown @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+  include <abstractions/bus/org.freedesktop.login1>
+  include <abstractions/bus/org.freedesktop.NetworkManager>
+  include <abstractions/nameservice-strict>
+  include <abstractions/python>
+
+  @{exec_path} mr,
+
+  @{bin}/ischroot  rix,
+
+  /usr/share/unattended-upgrades/{,*} r,
+  /etc/apt/apt.conf.d/{,*} r,
+
+  owner /var/log/unattended-upgrades/*.log* rw,
+
+  owner @{run}/unattended-upgrades.lock rwk,
+  owner @{run}/systemd/inhibit/[0-9]*.ref rw,
+
+  owner @{PROC}/@{pid}/mounts r,
+
+  include if exists <local/unattended-upgrade-shutdown>
+}

@@ -1,0 +1,58 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/xrdb
+profile xrdb @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/X-strict>
+
+  capability dac_read_search,
+
+  @{exec_path} mr,
+
+  @{bin}/{,*-}cpp-[0-9]*               rix,
+  @{sh_path}                           rix,
+  @{bin}/cpp                           rix,
+  @{lib}/gcc/@{multiarch}/@{int}*/cc1  rix,
+  @{lib}/llvm-[0-9]*/bin/clang         rix,
+
+  /usr/include/stdc-predef.h r,
+
+  /usr/etc/X11/xdm/Xresources r,
+
+  /etc/X11/Xresources/* r,
+
+  # The location of the .Xresources file
+  owner @{HOME}/.Xdefaults r,
+  owner @{HOME}/.Xresources r,
+  owner @{user_config_dirs}/.Xresources r,
+  owner @{user_config_dirs}/Xresources/.Xresources r,
+  owner @{user_config_dirs}/Xresources/* r,
+
+  owner @{user_share_dirs}/sddm/wayland-session.log w,
+
+  owner /tmp/kcminit.* r,
+  owner /tmp/plasma-apply-lookandfeel.* r,
+  owner /tmp/runtime-*/xauth_@{rand6} r,
+  owner /tmp/startplasma-x11.@{rand6} r,
+  owner /tmp/xauth-@{int}-_[0-9] r,
+
+  @{run}/sddm/\{@{uuid}\} r,
+  @{run}/sddm/xauth_@{rand6} r,
+
+  # file_inherit
+  owner /dev/tty@{int} rw,
+  owner @{HOME}/.xsession-errors w,
+
+  /dev/tty rw,
+  /dev/tty@{int} rw,
+
+  include if exists <local/xrdb>
+}
+

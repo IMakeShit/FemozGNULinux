@@ -1,0 +1,50 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,ibus/}ibus-dconf
+profile ibus-dconf @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-session>
+  include <abstractions/bus-system>
+  include <abstractions/dconf-write>
+  include <abstractions/nameservice-strict>
+
+  signal (receive) set=(cont, term) peer=@{systemd_user},
+  signal (receive) set=term peer=ibus-daemon,
+
+  unix (send, receive, connect) type=stream peer=(addr="@/home/*/.cache/ibus/dbus-????????",          label=ibus-daemon),
+  unix (send, receive, connect) type=stream peer=(addr="@/var/lib/gdm{3,}/.cache/ibus/dbus-????????", label=ibus-daemon),
+
+  dbus receive bus=session
+       interface=org.freedesktop.DBus.Introspectable
+       member=Introspect
+       peer=(name=:*, label=gnome-shell),
+
+  @{exec_path} mr,
+
+  /usr/share/gdm/greeter-dconf-defaults r,
+  /usr/share/dconf/profile/gdm r,
+
+  /etc/dconf/db/ibus r,
+  /etc/dconf/profile/ibus r,
+
+  /var/lib/gdm{3,}/.config/ibus/bus/ r,
+  /var/lib/gdm{3,}/.config/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+  /var/lib/gdm{3,}/.cache/dconf/ w,
+  /var/lib/gdm{3,}/.cache/dconf/user rw,
+  /var/lib/gdm{3,}/.config/dconf/ w,
+  /var/lib/gdm{3,}/.config/dconf/user rw,
+  /var/lib/gdm{3,}/greeter-dconf-defaults r,
+
+  owner @{user_config_dirs}/ibus/bus/ r,
+  owner @{user_config_dirs}/ibus/bus/@{md5}-unix-{,wayland-}@{int} r,
+
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/ibus-dconf>
+}

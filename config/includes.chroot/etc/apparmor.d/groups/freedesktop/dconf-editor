@@ -1,0 +1,29 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2019-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/dconf-editor
+profile dconf-editor @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/dconf-write>
+  include <abstractions/fontconfig-cache-read>
+  include <abstractions/gnome-strict>
+
+  @{exec_path} mr,
+
+  # When GSETTINGS_BACKEND=keyfile
+  owner @{user_config_dirs}/glib-2.0/ rw,
+  owner @{user_config_dirs}/glib-2.0/settings/ rw,
+  owner @{user_config_dirs}/glib-2.0/settings/keyfile rw,
+  owner @{user_config_dirs}/glib-2.0/settings/.goutputstream-@{rand6} rw,
+
+  owner @{HOME}/.Xauthority r,
+  owner /dev/tty@{int} rw,
+
+  include if exists <local/dconf-editor>
+}

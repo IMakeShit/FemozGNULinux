@@ -1,0 +1,69 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2020-2022 Mikhail Morfikov
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/networkctl
+profile networkctl @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/bus-system>
+
+  capability net_admin,
+  capability sys_module,
+  audit capability sys_resource,
+
+  network inet dgram,
+  network inet6 dgram,
+  network netlink raw,
+
+  signal send peer=child-pager,
+
+  ptrace (read) peer=@{systemd},
+
+  unix (bind) type=stream addr=@@{hex}/bus/networkctl/system,
+
+  # dbus: talk bus=system name=org.freedesktop.network1 label=systemd-networkd
+  # No label available
+  dbus send bus=system path=/org/freedesktop/network@{int}
+       interface=org.freedesktop.DBus.Properties
+       member=Get
+       peer=(name=org.freedesktop.network@{int}),
+
+  @{exec_path} mr,
+
+  @{bin}/less  rPx -> child-pager,
+  @{bin}/more  rPx -> child-pager,
+  @{bin}/pager rPx -> child-pager,
+
+  /etc/udev/hwdb.bin r,
+  /var/lib/dbus/machine-id r,
+  /etc/machine-id r,
+
+  # To be able to read logs
+  @{run}/log/ r,
+  /{run,var}/log/journal/ r,
+  /{run,var}/log/journal/@{md5}/ r,
+  /{run,var}/log/journal/@{md5}/user-@{hex}.journal* r,
+  /{run,var}/log/journal/@{md5}/system.journal* r,
+  /{run,var}/log/journal/@{md5}/system@@{hex}.journal* r,
+
+  @{run}/systemd/netif/leases/@{int} r,
+  @{run}/systemd/netif/links/@{int} r,
+  @{run}/systemd/netif/state r,
+  @{run}/systemd/notify w,
+
+  @{run}/udev/data/n@{int} r,
+
+  @{sys}/devices/**/net/**/uevent r,
+
+        @{PROC}/sys/kernel/random/boot_id r,
+        @{PROC}/1/cgroup r,
+  owner @{PROC}/@{pid}/cgroup r,
+  owner @{PROC}/@{pid}/stat r,
+
+  include if exists <local/networkctl>
+}

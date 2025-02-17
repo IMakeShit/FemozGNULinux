@@ -1,0 +1,42 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2018-2021 Mikhail Morfikov
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/usbguard-daemon
+profile usbguard-daemon @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/nameservice-strict>
+  include <abstractions/devices-usb>
+
+  capability chown,
+  capability fowner,
+  capability dac_override,
+
+  network netlink dgram,
+
+  unix (bind, listen) type=stream,
+  unix (connect) type=stream peer=(label=usbguard-dbus, addr=none),
+
+  @{exec_path} mr,
+
+  /etc/usbguard/*.conf rw,
+  /etc/usbguard/IPCAccessControl.d/{,*} r,
+
+  owner @{run}/usbguard.pid rwk,
+
+  /var/log/usbguard/usbguard-audit.log rw,
+
+  /dev/shm/ r,
+  /dev/shm/qb-usbguard-{request,response,event}-@{int}-@{int}-@{int}-{header,data} rw,
+  /dev/shm/qb-@{int}-@{int}-*/ rw,
+  /dev/shm/qb-@{int}-@{int}-@{int}-*/qb-{request,response,event}-usbguard-{header,data} rw,
+
+  @{sys}/devices/@{pci}/uevent r,
+
+  include if exists <local/usbguard-daemon>
+}

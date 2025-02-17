@@ -1,0 +1,37 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022 Jeroen Rijken
+# Copyright (C) 2023-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/which{.debianutils,}
+profile which @{exec_path} flags=(attach_disconnected) {
+  include <abstractions/base>
+  include <abstractions/consoles>
+
+  @{exec_path} mr,
+
+  @{sh_path}         rix,
+
+  @{bin}/ r,
+  @{bin}/**/ r,
+  @{lib}/ r,
+  @{lib}/**/ r,
+  /opt/**/bin/ r,
+  /snap/bin/ r,
+  /usr/include/ r,
+  /usr/local/**/ r,
+  /var/lib/flatpak/exports/bin/ r,
+
+  owner @{HOME}/{.,}go/bin/ r,
+  owner @{user_bin_dirs}/ r,
+
+  owner /dev/tty@{int} rw,
+
+  deny @{user_share_dirs}/gvfs-metadata/* r,
+
+  include if exists <local/which>
+}

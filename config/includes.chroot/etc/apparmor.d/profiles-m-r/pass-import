@@ -1,0 +1,42 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/pimport
+profile pass-import @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/python>
+  include <abstractions/openssl>
+  include <abstractions/nameservice-strict>
+
+  network inet dgram,
+  network inet6 dgram,
+  network inet stream,
+  network inet6 stream,
+
+  @{exec_path} mr,
+
+  @{bin}/                 r,
+  @{bin}/gcc              rix, # TODO: Test deny
+  @{bin}/ld               rix,
+  @{bin}/ldconfig         rix,
+  @{bin}/pass             rPx,
+  @{bin}/python3.@{int}   rix,
+  @{lib}/gcc/**/collect2  rix,
+
+  @{lib}/python{2.[4-7],3,3.@{int}}/** w, # TODO: Test deny
+
+  /usr/share/file/misc/magic.mgc r,
+
+  owner @{user_password_store_dirs}/{,**} rw,
+
+  owner /tmp/[a-zA-Z0-9]* rw,
+
+  @{PROC}/@{pids}/fd/ r,
+
+  include if exists <local/pass-import>
+}

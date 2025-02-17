@@ -1,0 +1,83 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2021-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{bin}/cockpit-bridge
+profile cockpit-bridge @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/app-launcher-root>
+  include <abstractions/consoles>
+  include <abstractions/nameservice-strict>
+  include <abstractions/openssl>
+  include <abstractions/python>
+
+  capability dac_read_search,
+  capability net_admin,
+  capability sys_nice,
+  capability sys_ptrace,
+
+  network inet dgram,
+  network inet stream,
+  network inet6 dgram,
+  network inet6 stream,
+
+  ptrace (read),
+
+  signal (send) set=term peer=cockpit-pcp,
+  signal (send) set=term peer=dbus-daemon,
+  signal (send) set=term peer=journalctl,
+  signal (send) set=term peer=ssh-agent,
+  signal (send) set=term peer=sudo,
+  signal (send) set=term peer=unconfined,
+
+  @{exec_path} mr,
+
+  @{bin}/journalctl rPx,
+  @{lib}/cockpit/cockpit-pcp rPx,
+  @{lib}/cockpit/cockpit-ssh rPx,
+
+  /usr/share/cockpit/{,**} r,
+
+  /etc/cockpit/{,**} r,
+  /etc/httpd/conf/mime.types r,
+  /etc/login.defs r,
+  /etc/machine-id r,
+  /etc/mime.types r,
+  /etc/motd r,
+  /etc/shadow r,
+  /etc/shells r,
+
+  owner @{user_cache_dirs}/ssh-agent.[0-9A-Z]* rw,
+
+  @{run}/user/@{uid}/ssh-agent.[0-9A-Z]* rw,
+  @{run}/utmp r,
+
+  @{sys}/class/hwmon/ r,
+  @{sys}/devices/**/hwmon@{int}/ r,
+  @{sys}/devices/**/hwmon@{int}/{name,temp*} r,
+  @{sys}/fs/cgroup/ r,
+  @{sys}/fs/cgroup/**/ r,
+  @{sys}/fs/cgroup/**/cpu.{stat,weight} r,
+  @{sys}/fs/cgroup/**/memory* r,
+
+        @{PROC}/ r,
+        @{PROC}/@{pids}/cgroup r,
+        @{PROC}/@{pids}/io r,
+        @{PROC}/@{pids}/net/dev r,
+        @{PROC}/1/cgroup r,
+        @{PROC}/cmdline r,
+        @{PROC}/diskstats r,
+        @{PROC}/loadavg r,
+        @{PROC}/uptime r,
+  owner @{PROC}/@{pid}/cmdline r,
+  owner @{PROC}/@{pid}/fd/ r,
+  owner @{PROC}/@{pid}/mounts r,
+
+  /dev/ptmx rw,
+
+  include if exists <local/cockpit-bridge>
+}

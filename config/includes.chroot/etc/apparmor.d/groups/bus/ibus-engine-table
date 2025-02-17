@@ -1,0 +1,29 @@
+# apparmor.d - Full set of apparmor profiles
+# Copyright (C) 2022-2024 Alexandre Pujol <alexandre@pujol.io>
+# SPDX-License-Identifier: GPL-2.0-only
+
+abi <abi/3.0>,
+
+include <tunables/global>
+
+@{exec_path} = @{lib}/{,ibus/}ibus-engine-table
+profile ibus-engine-table @{exec_path} {
+  include <abstractions/base>
+  include <abstractions/python>
+
+  @{exec_path} mr,
+
+  @{sh_path}             rix,
+  @{bin}/python3.@{int}  rix,
+
+  /usr/share/ibus-table/engine/{,**} r,
+  /usr/share/ibus-table/tables/ r,
+
+  owner /var/lib/gdm3/.cache/ibus-table/ w,
+  owner /var/lib/gdm3/.local/share/ibus-table/ w,
+
+  owner @{user_cache_dirs}/ibus-table/ w,
+  owner @{user_share_dirs}/ibus-table/ w,
+
+  include if exists <local/ibus-engine-table>
+}
