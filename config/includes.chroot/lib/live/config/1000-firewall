@@ -1,5 +1,4 @@
 #!/bin/bash
-
 iptables -F
 iptables -X
 # Разрешаем трафик от пользователя debian-tor (UID 1001)

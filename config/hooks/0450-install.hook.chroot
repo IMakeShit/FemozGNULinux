@@ -19,10 +19,10 @@ apt update
 # kleopatra - GUI для gpg
 # sdwdate и sdwdate-gui - инструменты для обновления времени через Tor с фичами безопасности(https://www.kicksecure.com/wiki/Sdwdate)
 apt install sdwdate sdwdate-gui librewolf anon-apps-config kloak metadata-cleaner kleopatra -y
-#apt install anon-connection-wizard --no-install-recommends tirdad -y
+#apt install anon-connection-wizard  tirdad --no-install-recommends -y
 apt install ./nekoray.deb -y # Менеджер прокси
 rm nekoray.deb
-apt install xorg lxde lightdm -y --no-install-recommends # устанавливаем LXDE без лишнего ,xorg,lightdm
+apt install dbus xorg -y --no-install-recommends # устанавливаем LXDE без лишнего ,xorg,lightdm
 ### VeraCrypt
 curl -fsSL https://notesalexp.org/debian/alexp_key.asc | gpg --dearmor | tee /usr/share/keyrings/alexp_key.gpg > /dev/null
 echo "deb [signed-by=/usr/share/keyrings/alexp_key.gpg] https://notesalexp.org/debian/bookworm/ bookworm main" | tee /etc/apt/sources.list.d/alexp.list
@@ -35,6 +35,5 @@ apt install veracrypt -y
 #mv i2p-archive-keyring.gpg /usr/share/keyrings
 #apt update
 #apt install i2p -y --no-install-recommends
-
-ln --symbolic /mnt/persistence/femoz/nekoray /opt/nekoray/config
-ln --symbolic /mnt/persistence/femoz/nm_connections /etc/NetworkManager/system-connections
+#ln --symbolic /mnt/persistence/femoz/nekoray /opt/nekoray/config
+#ln --symbolic /mnt/persistence/femoz/nm_connections /etc/NetworkManager/system-connections

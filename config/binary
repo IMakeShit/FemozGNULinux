@@ -142,8 +142,8 @@ LB_NET_TARBALL="false"
 LB_FIRMWARE_BINARY="false"
 
 # $LB_FIRMWARE_CHROOT: include firmware packages in debian-installer
-# (Default: true)
-LB_FIRMWARE_CHROOT="true"
+# (Default: false)
+LB_FIRMWARE_CHROOT="false"
 
 # $LB_SWAP_FILE_PATH: set swap file path
 # (Default: )

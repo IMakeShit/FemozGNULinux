@@ -1,0 +1,6 @@
+#!/bin/sh
+# echo "proc /proc proc defaults,hidepid=2 0 0" >> /etc/fstab
+echo "udev /dev devtmpfs defaults,nosuid,noexec,noatime 0 0" >> /etc/fstab
+echo "devpts /dev/pts devpts defaults,newinstance,ptmxmode=0666 0 0" >> /etc/fstab
+mount -o remount /proc
+mount -a

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Выпиливаем не нужные компоненты 
 apt purge rsyslog  bootlogd -y
-apt purge xterm anacron zutty git geoclue-2.0 gucharmap evince audacious xfburn reportbug orca yt-dlp doc-debian inetutils-telnet os-prober python3-reportbug telnet -y 
+apt purge xterm anacron zutty geoclue-2.0 reportbug doc-debian inetutils-telnet os-prober python3-reportbug telnet -y 
 
 apt autoremove -y # Вычищаем лишний мусор
 rm -rf /usr/share/applications/screensavers

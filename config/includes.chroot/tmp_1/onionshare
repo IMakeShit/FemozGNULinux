@@ -1,5 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --bind / / --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --unshare-pid /usr/bin/onionshare "${@}"

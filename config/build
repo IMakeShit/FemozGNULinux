@@ -1,6 +1,6 @@
 [Image]
 Architecture: amd64
-Archive-Areas: main non-free-firmware contrib
+Archive-Areas: main
 Distribution: daedalus
 Mirror-Bootstrap: http://packages.devuan.org/merged
 
