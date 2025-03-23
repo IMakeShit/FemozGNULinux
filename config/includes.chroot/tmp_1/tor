@@ -1,4 +1,0 @@
-#!/bin/sh
-# Дополнительная изоляция Tor 
-# На случай закладок в tor 
-LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --bind / / --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --unshare-all --share-net /usr/bin/tor "$@"

@@ -1,0 +1,3 @@
+#!/bin/bash
+mv /tmp_1/* /usr/local/bin
+rm -rf /tmp_1 /tmp_2

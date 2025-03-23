@@ -1,0 +1,23 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          udev-watchdog
+# Required-Start:
+# Required-Stop:
+# Default-Start:
+# Default-Stop:      0
+# Short-Description: 
+# Description:
+### END INIT INFO
+
+usage() {
+    echo "Usage: $0 {start}"
+}
+
+case "$1" in
+	start)
+		bash /usr/local/sbin/udev-watchdog-wrapper
+		;;
+	*)
+		usage
+		;;
+esac

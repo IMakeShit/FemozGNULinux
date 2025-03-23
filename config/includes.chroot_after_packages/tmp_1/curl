@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# This script is a wrapper around curl that forces it to use Tor.
+# We do that by setting the ALL_PROXY environment variable instead of
+# using torsocks, because torsocks has issues with IPv6 and therefore
+# disabled it by default (see https://forum.torproject.net/t/torsocks-release-2-4-0/3425).
+
+# Similarly to what torsocks does with the --isolate option, we set a
+# random username to make Tor use different circuits each time curl is
+# called (see IsolateSOCKSAuth).
+# взято из Tails и модифицировано 
+# Добавил изоляцию curl и подмену отпечатка
+
+username=curl-$(head -c 12 /dev/urandom | xxd -p)
+ALL_PROXY="socks5://${username}:0@127.0.0.1:9050"
+export ALL_PROXY
+
+LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --bind / / --dev /dev --proc /proc --tmpfs /tmp --bind / / --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --unshare-all --ro-bind /usr /usr --ro-bind /lib /lib --ro-bind /etc /etc --unshare-net --unshare-pid --unshare-uts --unshare-ipc --unshare-user /usr/bin/curl -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36" -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8" -H "Accept-Language: en-US,en;q=0.5" "$@"

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+#################################
+# Усиление безопасности системы #
+#################################
+
+echo "udev /dev devtmpfs defaults,nosuid,noexec,noatime 0 0" >> /etc/fstab
+echo "devpts /dev/pts devpts defaults,newinstance,ptmxmode=0666 0 0" >> /etc/fstab
+echo "/tmp    /tmp    tmpfs   noexec,nosuid,nodev   0 0" >> /etc/fstab
+#echo "/dev/shm  /dev/shm  tmpfs  rw,nodev,nosuid,noexec,size=1024M,mode=1770,uid=root,gid=shm 0 0" >> /etc/fstab
+mount -o remount /proc
+mount -a

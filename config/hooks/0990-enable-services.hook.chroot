@@ -1,8 +1,0 @@
-#!/bin/bash
-chmod +x /etc/init.d/*
-rc-update add kloak 
-rc-update add update-random-seed shutdown
-rc-update add anti-mitm 
-rc-update add anti-cold-boot shutdown
-rc-update add udev-watchdog 
-rm /etc/init.d/tor

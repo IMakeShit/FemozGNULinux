@@ -1,0 +1,32 @@
+#!/bin/bash
+### Конфигурация юзера
+useradd -m -s /bin/bash user
+echo "user:live" | chpasswd
+chmod -R 777 /home/user
+usermod -aG lightdm user
+### включаем репозитории
+extrepo enable librewolf
+extrepo enable whonix
+extrepo enable kicksecure
+apt purge extrepo -y
+apt update
+# Установка
+# librewolf - более безопасная и приватная версия firefox 
+# anon-apps-config - настройка системы для большей приватности и анонимности(пример: время в UTC)
+# kloak - Anti keystroke deanonimization tool
+# metadata-cleaner - утилита для простого удаления метаданных
+# kleopatra - GUI для gpg
+apt install sdwdate sdwdate-gui librewolf anon-apps-config kloak metadata-cleaner kleopatra -y
+apt install ./nekoray.deb -y # Менеджер прокси
+rm nekoray.deb
+apt install dbus xorg -y --no-install-recommends # устанавливаем LXDE без лишнего ,xorg,lightdm
+### VeraCrypt
+curl -fsSL https://notesalexp.org/debian/alexp_key.asc | gpg --dearmor | tee /usr/share/keyrings/alexp_key.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/alexp_key.gpg] https://notesalexp.org/debian/bookworm/ bookworm main" | tee /etc/apt/sources.list.d/alexp.list
+apt update
+apt install veracrypt -y
+ln --symbolic /mnt/persistence/femoz/nekoray /opt/nekoray/config
+ln --symbolic /mnt/persistence/femoz/nm_connections /etc/NetworkManager/system-connections
+apt purge xarchiver -y && apt install engrampa -y
+chmod +x /lib/live/config/*
+chmod +x /opt/tor.sh

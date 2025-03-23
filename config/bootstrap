@@ -1,73 +1,76 @@
 # config/bootstrap - options for live-build(7), bootstrap stage
 
-# $LB_DISTRIBUTION: select distribution to use
-# (Default: daedalus)
+# Select architecture to use
+LB_ARCHITECTURE="amd64"
+
+# Select distribution to use
 LB_DISTRIBUTION="daedalus"
 
-# $LB_PARENT_DISTRIBUTION: select parent distribution to use
-# (Default: daedalus)
+# Select parent distribution to use
 LB_PARENT_DISTRIBUTION="daedalus"
 
-# $LB_PARENT_DEBIAN_INSTALLER_DISTRIBUTION: select parent distribution for debian-installer to use
-# (Default: daedalus)
+# Select distribution to use in the chroot
+LB_DISTRIBUTION_CHROOT="daedalus"
+
+# Select parent distribution to use in the chroot
+LB_PARENT_DISTRIBUTION_CHROOT="daedalus"
+
+# Select distribution to use in the final image
+LB_DISTRIBUTION_BINARY="daedalus"
+
+# Select parent distribution to use in the final image
+LB_PARENT_DISTRIBUTION_BINARY="daedalus"
+
+# Select parent distribution for debian-installer to use
 LB_PARENT_DEBIAN_INSTALLER_DISTRIBUTION="daedalus"
 
-# $LB_PARENT_MIRROR_BOOTSTRAP: set parent mirror to bootstrap from
-# (Default: http://packages.devuan.org/merged)
-LB_PARENT_MIRROR_BOOTSTRAP="http://packages.devuan.org/merged"
+# Select archive areas to use
+LB_ARCHIVE_AREAS="main non-free non-free-firmware contrib"
 
-# $LB_PARENT_MIRROR_CHROOT: set parent mirror to fetch packages from
-# (Default: http://packages.devuan.org/merged)
-LB_PARENT_MIRROR_CHROOT="http://packages.devuan.org/merged"
+# Select parent archive areas to use
+LB_PARENT_ARCHIVE_AREAS="main non-free non-free-firmware contrib"
 
-# $LB_PARENT_MIRROR_CHROOT_SECURITY: set security parent mirror to fetch packages from
-# (Default: http://security.debian.org/)
+# Set parent mirror to bootstrap from
+LB_PARENT_MIRROR_BOOTSTRAP="https://sledjhamr.org/devuan/merged"
+
+# Set parent mirror to fetch packages from
+LB_PARENT_MIRROR_CHROOT="https://sledjhamr.org/devuan/merged"
+
+# Set security parent mirror to fetch packages from
 LB_PARENT_MIRROR_CHROOT_SECURITY="http://security.debian.org/"
 
-# $LB_PARENT_MIRROR_BINARY: set parent mirror which ends up in the image
-# (Default: http://packages.devuan.net/merged)
-LB_PARENT_MIRROR_BINARY="http://packages.devuan.net/merged"
+# Set parent mirror which ends up in the image
+LB_PARENT_MIRROR_BINARY="https://sledjhamr.org/devuan/merged"
 
-# $LB_PARENT_MIRROR_BINARY_SECURITY: set security parent mirror which ends up in the image
-# (Default: http://security.debian.org/)
-LB_PARENT_MIRROR_BINARY_SECURITY="http://security.debian.org/"
+# Set security parent mirror which ends up in the image
+LB_PARENT_MIRROR_BINARY_SECURITY="https://sledjhamr.org/devuan/"
 
-# $LB_PARENT_MIRROR_DEBIAN_INSTALLER: set debian-installer parent mirror
-# (Default: http://packages.devuan.org/merged)
-LB_PARENT_MIRROR_DEBIAN_INSTALLER="http://packages.devuan.org/merged"
+# Set debian-installer parent mirror
+LB_PARENT_MIRROR_DEBIAN_INSTALLER="https://sledjhamr.org/devuan/merged"
 
-# $LB_MIRROR_BOOTSTRAP: set mirror to bootstrap from
-# (Default: http://packages.devuan.org/merged)
-LB_MIRROR_BOOTSTRAP="http://packages.devuan.org/merged"
+# Set mirror to bootstrap from
+LB_MIRROR_BOOTSTRAP="https://sledjhamr.org/devuan/merged"
 
-# $LB_MIRROR_CHROOT: set mirror to fetch packages from
-# (Default: http://packages.devuan.org/merged)
-LB_MIRROR_CHROOT="http://packages.devuan.org/merged"
+# Set mirror to fetch packages from
+LB_MIRROR_CHROOT="https://sledjhamr.org/devuan/merged"
 
-# $LB_MIRROR_CHROOT_SECURITY: set security mirror to fetch packages from
-# (Default: http://security.debian.org/)
+# Set security mirror to fetch packages from
 LB_MIRROR_CHROOT_SECURITY="http://security.debian.org/"
 
-# $LB_MIRROR_BINARY: set mirror which ends up in the image
-# (Default: http://packages.devuan.net/merged)
-LB_MIRROR_BINARY="http://packages.devuan.net/merged"
+# Set mirror which ends up in the image
+LB_MIRROR_BINARY="https://sledjhamr.org/devuan/merged"
 
-# $LB_MIRROR_BINARY_SECURITY: set security mirror which ends up in the image
-# (Default: http://security.debian.org/)
+# Set security mirror which ends up in the image
 LB_MIRROR_BINARY_SECURITY="http://security.debian.org/"
 
-# $LB_MIRROR_DEBIAN_INSTALLER: set debian-installer mirror
-# (Default: http://packages.devuan.org/merged)
-LB_MIRROR_DEBIAN_INSTALLER="http://packages.devuan.org/merged"
+# Set debian-installer mirror
+LB_MIRROR_DEBIAN_INSTALLER="https://sledjhamr.org/devuan/merged"
 
-# $LB_BOOTSTRAP_QEMU_ARCHITECTURES: architectures to use foreign bootstrap
-# (Default: )
-LB_BOOTSTRAP_QEMU_ARCHITECTURES=""
+# Set architectures to use foreign bootstrap
+LB_BOOTSTRAP_QEMU_ARCHITECTURE=""
 
-# $LB_BOOTSTRAP_QEMU_EXCLUDE: packages to exclude during foreign bootstrap
-# (Default: )
+# Set packages to exclude during foreign bootstrap
 LB_BOOTSTRAP_QEMU_EXCLUDE=""
 
-# $LB_BOOTSTRAP_QEMU_STATIC: static qemu binary for foreign bootstrap
-# (Default: )
+# Set static qemu binary for foreign bootstrap
 LB_BOOTSTRAP_QEMU_STATIC=""

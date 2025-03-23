@@ -1,0 +1,13 @@
+#!/bin/sh
+
+apt install chkrootkit lynis --no-install-recommends
+printf "Chkrootkit" >> /home/user/Desktop/Security-test.txt
+printf "\n" >> /home/user/Desktop/Security-test.txt
+printf "\n" >> /home/user/Desktop/Security-test.txt
+printf "\n" >> /home/user/Desktop/Security-test.txt
+chkrootkit >> /home/user/Desktop/Security-test.txt
+printf "Lynis:normal mode" >> /home/user/Desktop/Security-test.txt
+printf "\n" >> /home/user/Desktop/Security-test.txt
+printf "\n" >> /home/user/Desktop/Security-test.txt
+printf "\n" >> /home/user/Desktop/Security-test.txt
+lynis audit system --no-colors >> /home/user/Desktop/Security-test.txt

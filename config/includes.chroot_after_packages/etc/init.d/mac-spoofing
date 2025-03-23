@@ -1,0 +1,29 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          change_mac
+# Required-Start:    $network
+# Required-Stop:     $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Change MAC addresses of network interfaces
+### END INIT INFO
+
+change_mac() {
+    for iface in $(ip link show | awk -F': ' '{print $2}' | grep -v lo); do
+        echo "Changing MAC address for interface: $iface"
+        macchanger -e "$iface" 
+    done
+}
+
+case "$1" in
+    start)
+        echo "Starting MAC address change..."
+        change_mac
+        ;;
+    *)
+        echo "Usage: /etc/init.d/change_mac.sh {start}"
+        exit 1
+        ;;
+esac
+
+exit 0

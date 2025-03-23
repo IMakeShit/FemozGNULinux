@@ -1,4 +1,0 @@
-#!/bin/sh
-# Да, я изолирую nano
-# что ты мне сделаешь я в другом городе 
-LB_PRELOAD="/usr/lib/libhardened_malloc.so" bwrap --bind / / --setenv LB_PRELOAD "/usr/lib/libhardened_malloc.so" --unshare-pid --unshare-net --unshare-cgroup --unshare-uts --unshare-ipc /bin/nano "$@"

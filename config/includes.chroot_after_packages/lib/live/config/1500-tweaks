@@ -1,0 +1,7 @@
+#!/bin/bash
+# Заставляем работать apt через сеть Tor
+sed -i 's,^\(\#\?\s*deb\(-src\)\?\s\+\)http://,\1tor+https://,' \
+           /etc/apt/sources.list /etc/apt/sources.list.d/*
+sed -i 's,^\(\#\?\s*deb\(-src\)\?\s\+\)https://,\1tor+https://,' \
+           /etc/apt/sources.list /etc/apt/sources.list.d/*
+           

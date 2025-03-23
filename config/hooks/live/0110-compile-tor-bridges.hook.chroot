@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#apt install git golang make -y
+#git clone https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/meek
+#cd meek/meek-client
+#make
+#mv meek-client /usr/bin
+#cd ../..
+#rm -rf meek
+#git clone https://gitlab.torproject.org/tpo/anti-censorship/pluggable-transports/webtunnel
+#cd webtunnel/main/client
+#go build
+#mv client webtunnel-client
+#mv webtunnel-client /usr/bin
+#cd ../../..
+#rm -rf webtunnel
+#

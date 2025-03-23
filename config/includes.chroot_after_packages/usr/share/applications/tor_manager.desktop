@@ -1,0 +1,9 @@
+
+[Desktop Entry]
+Type=Application
+Name=Tor manager
+Icon=/opt/tor.png
+Comment=Tor Manager
+Exec=bash /opt/tor.sh
+Terminal=true
+Categories=System;Utility;
